@@ -120,18 +120,31 @@ def session_state(telegram_id: int) -> dict:
 
 
 async def verify_mrkt_token(token: str) -> bool:
-    """Не сохраняем мусор: проверяем токен через /balance."""
-    headers = {
-        "authorization": token,
-        "cookie": f"access_token={token}",
-        "referer": "https://cdn.tgmrkt.io/",
-    }
+    """
+    Не сохраняем мусор: проверяем токен через /balance.
+
+    MRKT чувствителен к TLS-отпечатку, поэтому используем тот же
+    curl_cffi, что и авто-обмен initData. Иначе валидный токен
+    может быть отклонён просто из-за «не того» ClientHello.
+    """
+    headers = dict(core.BASE_HEADERS)
+    headers["authorization"] = token
+    headers["cookie"] = f"access_token={token}"
+
     try:
-        async with httpx.AsyncClient(timeout=12.0) as client:
-            response = await client.get(
-                core.BALANCE_URL,
-                headers=headers,
-            )
+        if CurlAsyncSession is not None:
+            async with CurlAsyncSession(impersonate="chrome") as client:
+                response = await client.get(
+                    core.BALANCE_URL,
+                    headers=headers,
+                )
+        else:
+            async with httpx.AsyncClient(timeout=12.0) as client:
+                response = await client.get(
+                    core.BALANCE_URL,
+                    headers=headers,
+                )
+        logger.info("🔎 Проверка MRKT-токена: /balance -> %s", response.status_code)
         return response.status_code == 200
     except Exception as e:
         logger.warning(f"⚠️ Не удалось проверить MRKT-токен: {e}")

@@ -562,7 +562,11 @@
       body: JSON.stringify({ ...payload, init_data: INIT_DATA }),
     }).then(async (r) => {
       const data = await r.json().catch(() => ({}));
-      if (!r.ok) throw new Error(data.detail || data.error || ("HTTP " + r.status));
+      if (!r.ok) {
+        const err = new Error(data.detail || data.error || ("HTTP " + r.status));
+        err.status = r.status;
+        throw err;
+      }
       return data;
     });
   }
@@ -768,9 +772,14 @@
       toast("MRKT-токен подключён");
       $("tokenOverlay").classList.remove("show");
     } catch (e) {
-      if (token) {
-        // API недоступен — отправим токен напрямую боту через sendData.
-        fallback({ auth_token: token }, "Токен отправлен боту");
+      if (e.status) {
+        // Сервер ответил, но отклонил токен / initData.
+        // НЕ вызываем fallback — иначе покажем «токен сохранён», хотя он не сохранён.
+        toast("Не сохранил: " + e.message);
+        if (token) $("tokenOverlay").classList.add("show");
+      } else if (token) {
+        // Реально нет связи с API (например, Mini App с GitHub Pages).
+        fallback({ auth_token: token }, "API недоступен — отправляю токен боту…");
       } else {
         $("tokenOverlay").classList.add("show");
         toast("Авто-обмен недоступен — вставь токен вручную");
