@@ -1,0 +1,865 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#0b0d12">
+  <title>TKRM Control — MRKT Sniper</title>
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+  <style>
+    :root {
+      --bg: var(--tg-theme-bg-color, #0b0d12);
+      --secondary-bg: var(--tg-theme-secondary-bg-color, #11141b);
+      --text: var(--tg-theme-text-color, #f7f9fc);
+      --hint: var(--tg-theme-hint-color, #8f97a7);
+      --link: var(--tg-theme-link-color, #5ca9ff);
+      --accent: #5b8cff;
+      --accent-2: #9b7cff;
+      --green: #35d39a;
+      --red: #ff5f6d;
+      --orange: #ffb457;
+      --card: var(--tg-theme-section-bg-color, rgba(25, 29, 38, .92));
+      --border: rgba(255,255,255,.075);
+      --shadow: 0 18px 44px rgba(0,0,0,.36);
+      --radius: 20px;
+      --ease: cubic-bezier(.22,.8,.3,1);
+    }
+
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    html, body { margin: 0; min-height: 100%; }
+    html { background: var(--bg); }
+    body {
+      padding: 0 14px calc(env(safe-area-inset-bottom) + 104px);
+      background:
+        radial-gradient(circle at 8% -4%, rgba(91,140,255,.18), transparent 34%),
+        radial-gradient(circle at 96% 8%, rgba(155,124,255,.12), transparent 30%),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      -webkit-font-smoothing: antialiased;
+    }
+    button, input { font: inherit; }
+    button { color: inherit; }
+    .container { max-width: 640px; margin: 0 auto; }
+
+    /* ---------- HEADER ---------- */
+    .header {
+      padding: calc(env(safe-area-inset-top) + 22px) 2px 16px;
+      display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    }
+    .brand { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .logo {
+      width: 46px; height: 46px; flex: none;
+      border-radius: 15px;
+      display: grid; place-items: center;
+      font-size: 21px; font-weight: 900; letter-spacing: -1px;
+      background: linear-gradient(145deg, var(--accent), var(--accent-2));
+      box-shadow: 0 10px 26px rgba(91,140,255,.32);
+    }
+    .brand-title { font-size: 20px; font-weight: 800; letter-spacing: -.4px; }
+    .brand-sub { margin-top: 2px; font-size: 11px; color: var(--hint); }
+    .pill {
+      flex: none; display: flex; align-items: center; gap: 7px;
+      padding: 8px 11px; border-radius: 999px;
+      font-size: 11px; font-weight: 700;
+      background: rgba(53,211,154,.10);
+      border: 1px solid rgba(53,211,154,.20);
+      color: var(--green);
+    }
+    .pill.off { background: rgba(255,95,109,.10); border-color: rgba(255,95,109,.20); color: var(--red); }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: currentColor; box-shadow: 0 0 10px currentColor; }
+    .dot.live { animation: breathe 1.8s infinite; }
+    @keyframes breathe { 50% { opacity: .35; transform: scale(.72); } }
+
+    /* ---------- HERO ---------- */
+    .hero {
+      position: relative; overflow: hidden;
+      padding: 18px;
+      border-radius: 24px;
+      background:
+        linear-gradient(135deg, rgba(91,140,255,.16), rgba(155,124,255,.06)),
+        var(--card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      margin-bottom: 12px;
+    }
+    .hero::after {
+      content: ""; position: absolute; right: -38px; top: -52px;
+      width: 180px; height: 180px; border-radius: 50%;
+      background: radial-gradient(circle, rgba(91,140,255,.22), transparent 68%);
+      pointer-events: none;
+    }
+    .hero-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .eyebrow { font-size: 10px; letter-spacing: 1.4px; text-transform: uppercase; color: var(--hint); font-weight: 800; }
+    .hero-title { margin-top: 5px; font-size: 17px; font-weight: 800; }
+    .hero-sub { margin-top: 4px; font-size: 12px; color: var(--hint); line-height: 1.45; }
+
+    .feed-box {
+      margin-top: 16px; padding: 14px;
+      border-radius: 16px;
+      background: rgba(10,12,17,.42);
+      border: 1px solid var(--border);
+    }
+    .feed-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+    .feed-label { font-size: 12px; color: var(--hint); }
+    .feed-value { font-size: 16px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .feed-value.on { color: var(--green); }
+    .track { height: 6px; border-radius: 99px; background: rgba(255,255,255,.08); margin: 12px 0 4px; overflow: hidden; }
+    .fill { height: 100%; width: 0; border-radius: inherit; background: linear-gradient(90deg, var(--accent), var(--green)); transition: width .7s var(--ease); }
+    .feed-note { font-size: 10px; color: var(--hint); }
+
+    .hero-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 9px; margin-top: 14px; }
+    .btn {
+      appearance: none; border: 1px solid var(--border);
+      border-radius: 14px; padding: 12px 10px;
+      background: rgba(255,255,255,.055);
+      font-size: 12px; font-weight: 700;
+      cursor: pointer;
+      transition: transform .18s var(--ease), background .18s var(--ease), border-color .18s var(--ease);
+      display: flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .btn:active { transform: scale(.96); }
+    .btn.primary {
+      background: linear-gradient(135deg, var(--accent), var(--accent-2));
+      border-color: transparent; color: #fff;
+      box-shadow: 0 8px 22px rgba(91,140,255,.28);
+    }
+    .btn.stop { background: rgba(255,95,109,.12); border-color: rgba(255,95,109,.25); color: var(--red); }
+    .btn.ghost { background: rgba(255,255,255,.035); }
+
+    /* ---------- STATS ---------- */
+    .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 14px; }
+    .stat {
+      padding: 11px 8px; text-align: center;
+      border-radius: 15px; background: var(--card);
+      border: 1px solid var(--border);
+    }
+    .stat-val { font-size: 14px; font-weight: 800; font-variant-numeric: tabular-nums; }
+    .stat-val.on { color: var(--green); }
+    .stat-val.off { color: var(--hint); }
+    .stat-label { margin-top: 3px; font-size: 9px; color: var(--hint); white-space: nowrap; }
+
+    /* ---------- TABS ---------- */
+    .tabs {
+      position: sticky; top: 0; z-index: 30;
+      display: grid; grid-template-columns: repeat(4, 1fr); gap: 4px;
+      padding: 5px; margin-bottom: 14px;
+      border-radius: 15px;
+      background: rgba(17,20,27,.92);
+      background: color-mix(in srgb, var(--secondary-bg) 92%, transparent);
+      border: 1px solid var(--border);
+      backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px);
+      box-shadow: 0 10px 26px rgba(0,0,0,.28);
+    }
+    .tab {
+      appearance: none; border: 0; border-radius: 11px;
+      padding: 9px 2px; background: transparent;
+      color: var(--hint); font-size: 11px; font-weight: 700;
+      cursor: pointer; transition: all .2s var(--ease);
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+    }
+    .tab .ic { font-size: 15px; line-height: 1; }
+    .tab.active { color: var(--text); background: rgba(255,255,255,.09); box-shadow: inset 0 0 0 1px rgba(255,255,255,.05); }
+    .panel { display: none; animation: fade .24s var(--ease); }
+    .panel.active { display: block; }
+    @keyframes fade { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+
+    .group { margin-bottom: 14px; }
+    .group-head { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; padding: 0 4px 8px; }
+    .group-title { font-size: 13px; font-weight: 800; }
+    .group-hint { font-size: 10px; color: var(--hint); }
+    .card {
+      border-radius: var(--radius);
+      background: var(--card);
+      border: 1px solid var(--border);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .row {
+      display: flex; align-items: center; gap: 12px;
+      padding: 14px 15px;
+      border-bottom: 1px solid var(--border);
+    }
+    .row:last-child { border-bottom: 0; }
+    .row-icon {
+      width: 34px; height: 34px; flex: none;
+      display: grid; place-items: center;
+      border-radius: 11px; font-size: 16px;
+      background: rgba(255,255,255,.055);
+    }
+    .row-main { flex: 1; min-width: 0; }
+    .row-title { font-size: 13px; font-weight: 700; }
+    .row-desc { margin-top: 3px; font-size: 10.5px; color: var(--hint); line-height: 1.35; }
+
+    /* switch */
+    .switch { position: relative; width: 44px; height: 26px; flex: none; }
+    .switch input { position: absolute; opacity: 0; width: 0; height: 0; }
+    .slider {
+      position: absolute; inset: 0; border-radius: 99px; cursor: pointer;
+      background: rgba(255,255,255,.13);
+      transition: background .22s var(--ease);
+    }
+    .slider::before {
+      content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px;
+      border-radius: 50%; background: #fff;
+      box-shadow: 0 2px 6px rgba(0,0,0,.3);
+      transition: transform .22s var(--ease);
+    }
+    .switch input:checked + .slider { background: linear-gradient(135deg, var(--accent), var(--green)); }
+    .switch input:checked + .slider::before { transform: translateX(18px); }
+    .switch input:focus-visible + .slider { outline: 2px solid var(--link); outline-offset: 2px; }
+
+    /* inputs */
+    .fields { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 15px; }
+    .field label { display: block; margin-bottom: 6px; font-size: 10.5px; color: var(--hint); }
+    .field input {
+      width: 100%; padding: 11px 12px;
+      border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(10,12,17,.45); color: var(--text);
+      font-size: 14px; font-weight: 700; font-variant-numeric: tabular-nums;
+      outline: none; transition: border-color .2s, box-shadow .2s;
+    }
+    .field input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(91,140,255,.14); }
+    .presets { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 15px 15px; }
+    .preset {
+      border: 1px solid var(--border); border-radius: 9px;
+      background: rgba(255,255,255,.05);
+      padding: 7px 10px; font-size: 10.5px; font-weight: 700; cursor: pointer;
+      transition: all .18s var(--ease);
+    }
+    .preset:active { transform: scale(.94); background: rgba(91,140,255,.2); }
+    .range-line { display: flex; align-items: center; justify-content: space-between; padding: 15px 15px 6px; }
+    .range-name { font-size: 12px; font-weight: 700; }
+    .range-value { font-size: 16px; font-weight: 800; color: var(--accent); font-variant-numeric: tabular-nums; }
+
+    .chips { display: flex; flex-wrap: wrap; gap: 8px; padding: 15px; }
+    .chip {
+      display: flex; align-items: center; gap: 7px;
+      padding: 8px 11px; border-radius: 11px;
+      background: rgba(255,255,255,.045); border: 1px solid var(--border);
+      font-size: 11px; cursor: pointer; user-select: none;
+      transition: all .18s var(--ease);
+    }
+    .chip input { display: none; }
+    .chip .box {
+      width: 15px; height: 15px; border-radius: 5px; flex: none;
+      border: 1.5px solid var(--hint); display: grid; place-items: center;
+      font-size: 10px; color: transparent;
+    }
+    .chip.checked { background: rgba(91,140,255,.14); border-color: rgba(91,140,255,.38); }
+    .chip.checked .box { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    /* ---------- SAVE BAR ---------- */
+    .savebar {
+      position: fixed; left: 0; right: 0; bottom: 0; z-index: 40;
+      padding: 12px 14px calc(env(safe-area-inset-bottom) + 12px);
+      background: linear-gradient(to top, var(--bg) 72%, transparent);
+      pointer-events: none;
+    }
+    .savebar-inner {
+      max-width: 612px; margin: 0 auto;
+      display: flex; gap: 9px; pointer-events: auto;
+    }
+    .savebar .btn { flex: 1; padding: 14px; font-size: 13px; }
+    .savebar .btn.ghost { flex: 0 0 42%; }
+
+    /* ---------- TOAST / MODAL ---------- */
+    .toast {
+      position: fixed; z-index: 60; left: 50%; bottom: calc(env(safe-area-inset-bottom) + 100px);
+      transform: translate(-50%, 20px);
+      padding: 11px 18px; border-radius: 13px;
+      background: rgba(18,22,30,.96); border: 1px solid var(--border);
+      box-shadow: var(--shadow); font-size: 12px; font-weight: 700;
+      opacity: 0; pointer-events: none; transition: all .28s var(--ease);
+    }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    .overlay {
+      position: fixed; inset: 0; z-index: 70;
+      display: grid; place-items: center; padding: 20px;
+      background: rgba(4,6,10,.72); backdrop-filter: blur(6px);
+      opacity: 0; pointer-events: none; transition: opacity .22s;
+    }
+    .overlay.show { opacity: 1; pointer-events: auto; }
+    .modal {
+      width: 100%; max-width: 380px; padding: 20px;
+      border-radius: 22px; background: var(--secondary-bg);
+      border: 1px solid var(--border); box-shadow: var(--shadow);
+    }
+    .modal h3 { margin: 0 0 8px; font-size: 16px; }
+    .modal p { margin: 0 0 14px; font-size: 11.5px; color: var(--hint); line-height: 1.5; }
+    .modal input {
+      width: 100%; padding: 12px; margin-bottom: 12px;
+      border-radius: 12px; border: 1px solid var(--border);
+      background: rgba(0,0,0,.3); color: var(--text); font-size: 13px; outline: none;
+    }
+    .modal input:focus { border-color: var(--accent); }
+    .modal-actions { display: flex; gap: 8px; }
+    .modal-actions .btn { flex: 1; }
+    .foot { margin-top: 18px; text-align: center; font-size: 10px; color: var(--hint); }
+
+    @media (max-width: 380px) {
+      .stats { grid-template-columns: repeat(2, 1fr); }
+      .fields { grid-template-columns: 1fr; }
+      .hero-actions { grid-template-columns: 1fr; }
+    }
+    @media (min-width: 900px) and (pointer: fine) {
+      body { padding-top: 10px; }
+      .header { padding-top: 16px; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header class="header">
+    <div class="brand">
+      <div class="logo">T</div>
+      <div>
+        <div class="brand-title">TKRM Control</div>
+        <div class="brand-sub">MRKT sniper · панель управления</div>
+      </div>
+    </div>
+    <div class="pill off" id="tokenPill"><span class="dot"></span><span id="tokenPillText">Нет токена</span></div>
+  </header>
+
+  <section class="hero">
+    <div class="hero-head">
+      <div>
+        <div class="eyebrow">Статус аккаунта</div>
+        <div class="hero-title" id="heroTitle">Подключи MRKT-аккаунт</div>
+        <div class="hero-sub" id="heroSub">Токен обновится автоматически — F12 больше не нужен.</div>
+      </div>
+    </div>
+
+    <div class="feed-box">
+      <div class="feed-row">
+        <span class="feed-label">Мониторинг feed</span>
+        <span class="feed-value off" id="feedValue">ВЫКЛЮЧЕН</span>
+      </div>
+      <div class="track"><div class="fill" id="feedFill"></div></div>
+      <div class="feed-note" id="feedNote">По умолчанию выключен. Включи на 30 минут, когда нужен снайпинг.</div>
+    </div>
+
+    <div class="hero-actions">
+      <button class="btn primary" id="authBtn" type="button">🔑 Обновить токен</button>
+      <button class="btn" id="feedBtn" type="button">▶️ Feed на 30 мин</button>
+    </div>
+  </section>
+
+  <section class="stats">
+    <div class="stat"><div class="stat-val off" id="statBuy">OFF</div><div class="stat-label">Покупка</div></div>
+    <div class="stat"><div class="stat-val off" id="statOffer">OFF</div><div class="stat-label">Офферы</div></div>
+    <div class="stat"><div class="stat-val" id="statPoll">1.0s</div><div class="stat-label">Опрос</div></div>
+    <div class="stat"><div class="stat-val" id="statDedup">ON</div><div class="stat-label">Дедуп</div></div>
+  </section>
+
+  <nav class="tabs" role="tablist" aria-label="Разделы">
+    <button class="tab active" data-tab="main" role="tab"><span class="ic">🏠</span>Главная</button>
+    <button class="tab" data-tab="buy" role="tab"><span class="ic">🚀</span>Снайпер</button>
+    <button class="tab" data-tab="filters" role="tab"><span class="ic">🎯</span>Фильтры</button>
+    <button class="tab" data-tab="system" role="tab"><span class="ic">🧠</span>Система</button>
+  </nav>
+
+  <!-- ГЛАВНАЯ -->
+  <section class="panel active" data-panel="main">
+    <div class="group">
+      <div class="group-head"><span class="group-title">Быстрые действия</span><span class="group-hint">без F12</span></div>
+      <div class="card">
+        <div class="row">
+          <div class="row-icon">🔑</div>
+          <div class="row-main"><div class="row-title">MRKT AUTH_TOKEN</div><div class="row-desc">Обменяем initData Telegram на токен маркета. Если MRKT отклонит обмен — вставим токен вручную.</div></div>
+          <button class="btn ghost" id="authRowBtn" type="button">Обновить</button>
+        </div>
+        <div class="row">
+          <div class="row-icon">⏱</div>
+          <div class="row-main"><div class="row-title">Feed на 30 минут</div><div class="row-desc">Бот опрашивает MRKT только в этом окне, потом выключается сам.</div></div>
+          <button class="btn ghost" id="feedRowBtn" type="button">Включить</button>
+        </div>
+        <div class="row">
+          <div class="row-icon">🎁</div>
+          <div class="row-main"><div class="row-title">Официальный MRKT</div><div class="row-desc">Открыть маркетплейс в Telegram.</div></div>
+          <button class="btn ghost" id="mrktBtn" type="button">Открыть</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><span class="group-title">Основные тумблеры</span><span class="group-hint">быстрый доступ</span></div>
+      <div class="card">
+        <div class="row">
+          <div class="row-icon">🛒</div>
+          <div class="row-main"><div class="row-title">Авто-покупка</div><div class="row-desc">Выкупать лоты по правилам снайпера</div></div>
+          <label class="switch"><input type="checkbox" id="autoBuy"><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="row-icon">💎</div>
+          <div class="row-main"><div class="row-title">Авто-оффер</div><div class="row-desc">Ставить предложения ниже флора</div></div>
+          <label class="switch"><input type="checkbox" id="autoOffer"><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="row-icon">🔔</div>
+          <div class="row-main"><div class="row-title">Уведомления</div><div class="row-desc">Карточки найденных подарков в Telegram</div></div>
+          <label class="switch"><input type="checkbox" id="notifications"><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="row-icon">🖤</div>
+          <div class="row-main"><div class="row-title">Black / Onyx</div><div class="row-desc">Отдельные уведомления для чёрных фонов</div></div>
+          <label class="switch"><input type="checkbox" id="notificationsBlackOnyx"><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- СНАЙПЕР -->
+  <section class="panel" data-panel="buy">
+    <div class="group">
+      <div class="group-head"><span class="group-title">Правила покупки</span><span class="group-hint">BUY</span></div>
+      <div class="card">
+        <div class="range-line"><span class="range-name">Максимальный множитель к флору</span><span class="range-value" id="multiplierValue">1.02x</span></div>
+        <div class="presets">
+          <button class="preset" data-multiplier="0.95" type="button">0.95x</button>
+          <button class="preset" data-multiplier="1.00" type="button">1.00x</button>
+          <button class="preset" data-multiplier="1.02" type="button">1.02x</button>
+          <button class="preset" data-multiplier="1.05" type="button">1.05x</button>
+        </div>
+        <div class="fields" style="padding-top:0">
+          <div class="field"><label for="maxMultiplier">Множитель</label><input id="maxMultiplier" type="number" step="0.01" min="0.1" value="1.02"></div>
+          <div class="field"><label for="offerMultiplier">Множитель оффера</label><input id="offerMultiplier" type="number" step="0.01" min="0.1" value="0.98"></div>
+          <div class="field"><label for="minPrice">Мин. цена, TON</label><input id="minPrice" type="number" step="0.01" min="0" value=""></div>
+          <div class="field"><label for="maxPrice">Макс. цена, TON</label><input id="maxPrice" type="number" step="0.01" min="0" value=""></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="group">
+      <div class="group-head"><span class="group-title">Ордера</span><span class="group-hint">% от флора</span></div>
+      <div class="card">
+        <div class="fields">
+          <div class="field"><label for="orderDiscount1">Ордер №1</label><input id="orderDiscount1" type="number" step="1" min="0" max="99" value="30"></div>
+          <div class="field"><label for="orderDiscount2">Ордер №2</label><input id="orderDiscount2" type="number" step="1" min="0" max="99" value="50"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ФИЛЬТРЫ -->
+  <section class="panel" data-panel="filters">
+    <div class="group">
+      <div class="group-head"><span class="group-title">Игнорировать события</span><span class="group-hint">SKIP</span></div>
+      <div class="card">
+        <div class="chips">
+          <label class="chip"><input type="checkbox" id="skipLuckyBuy"><span class="box">✓</span>🍀 Lucky Buy</label>
+          <label class="chip"><input type="checkbox" id="skipPurchase"><span class="box">✓</span>🛒 Покупки</label>
+          <label class="chip"><input type="checkbox" id="skipWithdraw"><span class="box">✓</span>📤 Вывод</label>
+          <label class="chip"><input type="checkbox" id="skipRemoveSale"><span class="box">✓</span>❌ Снятие с продажи</label>
+          <label class="chip"><input type="checkbox" id="skipUnlisted"><span class="box">✓</span>🚫 Unlisted</label>
+          <label class="chip"><input type="checkbox" id="skipCancelSale"><span class="box">✓</span>🗑 Cancel Sale</label>
+          <label class="chip"><input type="checkbox" id="skipInactive"><span class="box">✓</span>⚠️ isOnSale=false</label>
+        </div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><span class="group-title">Защита от повторов</span><span class="group-hint">DEDUP</span></div>
+      <div class="card">
+        <div class="row">
+          <div class="row-icon">♻️</div>
+          <div class="row-main"><div class="row-title">Не обрабатывать один лот дважды</div><div class="row-desc">Стабильный ключ — gift.id</div></div>
+          <label class="switch"><input type="checkbox" id="dedup"><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- СИСТЕМА -->
+  <section class="panel" data-panel="system">
+    <div class="group">
+      <div class="group-head"><span class="group-title">Производительность</span><span class="group-hint">важно</span></div>
+      <div class="card">
+        <div class="fields">
+          <div class="field"><label for="pollInterval">Интервал feed, сек</label><input id="pollInterval" type="number" step="0.1" min="0.2" value="1.0"></div>
+          <div class="field"><label for="autoRefreshInterval">Интервал ордеров, сек</label><input id="autoRefreshInterval" type="number" step="10" min="30" value="300"></div>
+        </div>
+        <div class="row">
+          <div class="row-icon">🔄</div>
+          <div class="row-main"><div class="row-title">Авто-обновление ордеров</div><div class="row-desc">Переставлять ордера при изменении флора</div></div>
+          <label class="switch"><input type="checkbox" id="autoRefreshOrders"><span class="slider"></span></label>
+        </div>
+        <div class="row">
+          <div class="row-icon">📳</div>
+          <div class="row-main"><div class="row-title">Haptic feedback</div><div class="row-desc">Вибрация интерфейса Telegram</div></div>
+          <label class="switch"><input type="checkbox" id="haptic"><span class="slider"></span></label>
+        </div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-head"><span class="group-title">Безопасность</span><span class="group-hint">Render</span></div>
+      <div class="card">
+        <div class="row">
+          <div class="row-icon">🛡</div>
+          <div class="row-main"><div class="row-title">Токен не хранится в браузере</div><div class="row-desc">initData проверяется подписью на сервере, токен лежит только в users.json</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <div class="foot">TKRM Control · собрано для Telegram Mini Apps</div>
+</div>
+
+<div class="savebar">
+  <div class="savebar-inner">
+    <button class="btn ghost" id="resetBtn" type="button">↺ Сбросить</button>
+    <button class="btn primary" id="saveBtn" type="button">✓ Сохранить настройки</button>
+  </div>
+</div>
+
+<div class="toast" id="toast">Готово</div>
+
+<div class="overlay" id="tokenOverlay">
+  <div class="modal">
+    <h3>Вставить MRKT-токен</h3>
+    <p>Автоматический обмен не сработал. Открой MRKT → network → <code>/api/v1/auth</code> → Response → token, вставь его сюда. Больше повторять не придётся — бот сохранит токен на сервере.</p>
+    <input id="tokenInput" type="text" placeholder="AUTH_TOKEN" autocomplete="off" spellcheck="false">
+    <div class="modal-actions">
+      <button class="btn ghost" id="cancelTokenBtn" type="button">Отмена</button>
+      <button class="btn primary" id="confirmTokenBtn" type="button">Сохранить</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const tg = window.Telegram ? window.Telegram.WebApp : null;
+  if (tg) { try { tg.ready(); tg.expand(); } catch (e) {} }
+
+  const params = new URLSearchParams(location.search);
+  const API_BASE = (
+    params.get("api") ||
+    (location.hostname === "localhost" || location.hostname === "127.0.0.1" ? location.origin : "")
+  ).replace(/\/$/, "");
+
+  const INIT_DATA = tg && tg.initData ? tg.initData : "";
+
+  const $ = (id) => document.getElementById(id);
+  let toastTimer = null;
+
+  function toast(text) {
+    const t = $("toast");
+    t.textContent = text;
+    t.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => t.classList.remove("show"), 2200);
+  }
+
+  function haptic(type) {
+    if (!$("haptic").checked) return;
+    try { tg && tg.HapticFeedback && tg.HapticFeedback.impactOccurred(type); } catch (e) {}
+  }
+
+  function api(path, payload) {
+    if (!API_BASE || !INIT_DATA) return Promise.reject(new Error("API недоступен"));
+    return fetch(API_BASE + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ...payload, init_data: INIT_DATA }),
+    }).then(async (r) => {
+      const data = await r.json().catch(() => ({}));
+      if (!r.ok) throw new Error(data.detail || data.error || ("HTTP " + r.status));
+      return data;
+    });
+  }
+
+  function fallback(data, message) {
+    if (!tg || !tg.sendData) {
+      toast("Нет связи с ботом. Открой Mini App из Telegram.");
+      return;
+    }
+    try { tg.sendData(JSON.stringify(data)); } catch (e) {}
+    toast(message);
+    setTimeout(() => { try { tg.close(); } catch (e) {} }, 600);
+  }
+
+  /* ---------------- TABS ---------------- */
+  document.querySelectorAll(".tab").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      haptic("light");
+      const name = btn.dataset.tab;
+      document.querySelectorAll(".tab").forEach((b) => b.classList.toggle("active", b === btn));
+      document.querySelectorAll(".panel").forEach((p) => p.classList.toggle("active", p.dataset.panel === name));
+      window.scrollTo({ top: 0, behavior: "auto" });
+    });
+  });
+
+  /* ---------------- SETTINGS ---------------- */
+  const DEFAULTS = {
+    auto_buy: false, auto_offer: false, notifications: true,
+    notifications_black_onyx: true, dedup: true,
+    max_multiplier: 1.02, min_price: 0, max_price: 0,
+    offer_multiplier: 0.98, order_discount_1: 30, order_discount_2: 50,
+    skip_lucky_buy: true, skip_purchase: true, skip_withdraw: true,
+    skip_remove_sale: true, skip_unlisted: true, skip_cancel_sale: true,
+    skip_inactive: true, poll_interval: 1.0,
+    auto_refresh_orders: false, auto_refresh_interval: 300, haptic: true,
+  };
+
+  const BOOL_KEYS = [
+    "auto_buy", "auto_offer", "notifications", "notifications_black_onyx", "dedup",
+    "skip_lucky_buy", "skip_purchase", "skip_withdraw", "skip_remove_sale",
+    "skip_unlisted", "skip_cancel_sale", "skip_inactive",
+    "auto_refresh_orders", "haptic",
+  ];
+
+  const ID_BY_KEY = {
+    auto_buy: "autoBuy", auto_offer: "autoOffer", notifications: "notifications",
+    notifications_black_onyx: "notificationsBlackOnyx", dedup: "dedup",
+    max_multiplier: "maxMultiplier", min_price: "minPrice", max_price: "maxPrice",
+    offer_multiplier: "offerMultiplier", order_discount_1: "orderDiscount1",
+    order_discount_2: "orderDiscount2", skip_lucky_buy: "skipLuckyBuy",
+    skip_purchase: "skipPurchase", skip_withdraw: "skipWithdraw",
+    skip_remove_sale: "skipRemoveSale", skip_unlisted: "skipUnlisted",
+    skip_cancel_sale: "skipCancelSale", skip_inactive: "skipInactive",
+    poll_interval: "pollInterval", auto_refresh_orders: "autoRefreshOrders",
+    auto_refresh_interval: "autoRefreshInterval", haptic: "haptic",
+  };
+
+  let currentState = {
+    auth_configured: false, auth_ok: false,
+    feed_enabled: false, feed_seconds_left: 0,
+    feed_window_seconds: 1800,
+  };
+  let feedDeadline = 0;
+
+  function applySettings(s) {
+    Object.keys(ID_BY_KEY).forEach((key) => {
+      const node = $(ID_BY_KEY[key]);
+      if (!node) return;
+      const value = s && s[key] !== undefined ? s[key] : DEFAULTS[key];
+      if (BOOL_KEYS.includes(key)) {
+        node.checked = !!value;
+        const chip = node.closest(".chip");
+        if (chip) chip.classList.toggle("checked", node.checked);
+      } else if (value !== null && value !== undefined && value !== "") node.value = value;
+    });
+    refreshDashboard();
+  }
+
+  function collectSettings() {
+    const out = {};
+    Object.keys(ID_BY_KEY).forEach((key) => {
+      const node = $(ID_BY_KEY[key]);
+      if (BOOL_KEYS.includes(key)) out[key] = !!node.checked;
+      else {
+        const num = parseFloat(node.value);
+        out[key] = Number.isFinite(num) ? num : DEFAULTS[key];
+      }
+    });
+    return out;
+  }
+
+  function refreshDashboard() {
+    const buy = $("autoBuy").checked;
+    const offer = $("autoOffer").checked;
+    $("statBuy").textContent = buy ? "ON" : "OFF";
+    $("statOffer").textContent = offer ? "ON" : "OFF";
+    $("statBuy").className = "stat-val " + (buy ? "on" : "off");
+    $("statOffer").className = "stat-val " + (offer ? "on" : "off");
+    $("statPoll").textContent = (parseFloat($("pollInterval").value) || 1).toFixed(1) + "s";
+    $("statDedup").textContent = $("dedup").checked ? "ON" : "OFF";
+    $("statDedup").className = "stat-val " + ($("dedup").checked ? "on" : "off");
+    const mp = parseFloat($("maxMultiplier").value);
+    $("multiplierValue").textContent = (Number.isFinite(mp) ? mp : 1.02).toFixed(2) + "x";
+  }
+
+  document.querySelectorAll("input").forEach((input) => {
+    input.addEventListener("change", () => {
+      const chip = input.closest(".chip");
+      if (chip) chip.classList.toggle("checked", input.checked);
+      refreshDashboard();
+      try { localStorage.setItem("tkrm_settings", JSON.stringify(collectSettings())); } catch (e) {}
+    });
+  });
+
+  document.querySelectorAll(".preset").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      $("maxMultiplier").value = btn.dataset.multiplier;
+      haptic("light");
+      refreshDashboard();
+    });
+  });
+
+  /* ---------------- FEED / AUTH UI ---------------- */
+  function setFeedState(active, secondsLeft) {
+    const value = $("feedValue");
+    const fill = $("feedFill");
+    const btn = $("feedBtn");
+    const row = $("feedRowBtn");
+
+    if (active) {
+      value.textContent = "АКТИВЕН · " + Math.floor(secondsLeft / 60) + ":" + String(secondsLeft % 60).padStart(2, "0");
+      value.className = "feed-value on";
+      fill.style.width = Math.min(100, (secondsLeft / 1800) * 100) + "%";
+      btn.textContent = "⏹ Остановить feed";
+      btn.className = "btn stop";
+      row.textContent = "Остановить";
+    } else {
+      value.textContent = "ВЫКЛЮЧЕН";
+      value.className = "feed-value off";
+      fill.style.width = "0%";
+      btn.textContent = "▶️ Feed на 30 мин";
+      btn.className = "btn primary";
+      row.textContent = "Включить";
+    }
+  }
+
+  function applyState(state) {
+    currentState = { ...currentState, ...(state || {}) };
+    const ok = !!currentState.auth_configured;
+    $("tokenPill").className = "pill" + (ok ? "" : " off");
+    $("tokenPillText").textContent = ok ? "Токен подключён" : "Нет токена";
+    $("heroTitle").textContent = ok ? "Аккаунт подключён" : "Подключи MRKT-аккаунт";
+    $("heroSub").textContent = ok
+      ? "Токен хранится на сервере. Feed не опрашивается, пока ты его не включишь."
+      : "Токен обновится автоматически — F12 больше не нужен.";
+    $("authBtn").textContent = ok ? "🔄 Обновить токен" : "🔑 Подключить токен";
+    setFeedState(!!currentState.feed_enabled, currentState.feed_seconds_left || 0);
+    feedDeadline = currentState.feed_enabled
+      ? Date.now() + (currentState.feed_seconds_left || 0) * 1000
+      : 0;
+  }
+
+  function tickFeed() {
+    if (feedDeadline <= 0) {
+      if ($("feedValue").textContent !== "ВЫКЛЮЧЕН") setFeedState(false, 0);
+      return;
+    }
+    const left = Math.max(0, Math.ceil((feedDeadline - Date.now()) / 1000));
+    if (left <= 0) {
+      feedDeadline = 0;
+      currentState.feed_enabled = false;
+      setFeedState(false, 0);
+      toast("Окно мониторинга закончилось — feed выключен");
+      return;
+    }
+    setFeedState(true, left);
+  }
+  setInterval(tickFeed, 1000);
+
+  async function refreshState(silent) {
+    try {
+      const state = await api("/api/session/state", {});
+      applyState(state);
+      if (state.settings) applySettings(state.settings);
+    } catch (e) {
+      if (!silent) toast("Не удалось обновить статус: " + e.message);
+      const encoded = params.get("s");
+      if (encoded && !currentState.auth_configured) {
+        // состояние из URL уже применено ниже
+      }
+    }
+  }
+
+  async function doAuth(token) {
+    const btn = $("authBtn");
+    btn.disabled = true;
+    btn.textContent = "⏳ Обмениваем...";
+    try {
+      const payload = token ? { token } : {};
+      const result = await api("/api/session/auth", payload);
+      haptic("success");
+      applyState(result);
+      toast("MRKT-токен подключён");
+      $("tokenOverlay").classList.remove("show");
+    } catch (e) {
+      if (token) {
+        // API недоступен — отправим токен напрямую боту через sendData.
+        fallback({ auth_token: token }, "Токен отправлен боту");
+      } else {
+        $("tokenOverlay").classList.add("show");
+        toast("Авто-обмен недоступен — вставь токен вручную");
+      }
+    } finally {
+      btn.disabled = false;
+      btn.textContent = currentState.auth_configured ? "🔄 Обновить токен" : "🔑 Подключить токен";
+    }
+  }
+
+  async function toggleFeed() {
+    const active = feedDeadline > 0;
+    try {
+      const result = await api("/api/session/feed", { enabled: !active, seconds: 1800 });
+      applyState(result);
+      haptic("medium");
+      toast(active ? "Feed остановлен" : "Feed включён на 30 минут");
+    } catch (e) {
+      fallback(
+        active ? { feed_disable: true } : { feed_enable: true, feed_seconds: 1800 },
+        active ? "Feed остановлен" : "Feed включён на 30 минут"
+      );
+      feedDeadline = active ? 0 : Date.now() + 1800 * 1000;
+      setFeedState(!active, 1800);
+    }
+  }
+
+  $("authBtn").addEventListener("click", () => doAuth(""));
+  $("authRowBtn").addEventListener("click", () => doAuth(""));
+  $("feedBtn").addEventListener("click", toggleFeed);
+  $("feedRowBtn").addEventListener("click", toggleFeed);
+  $("mrktBtn").addEventListener("click", () => {
+    try { tg.openTelegramLink("https://t.me/mrkt/app"); }
+    catch (e) { location.href = "https://t.me/mrkt/app"; }
+  });
+
+  $("cancelTokenBtn").addEventListener("click", () => $("tokenOverlay").classList.remove("show"));
+  $("confirmTokenBtn").addEventListener("click", () => {
+    const token = $("tokenInput").value.trim();
+    if (!token) { toast("Вставь токен"); return; }
+    doAuth(token);
+  });
+
+  async function saveSettings() {
+    haptic("medium");
+    const settings = collectSettings();
+    try {
+      await api("/api/session/settings", { settings });
+      toast("Настройки сохранены на сервере");
+    } catch (e) {
+      fallback(settings, "Настройки сохранены");
+      return;
+    }
+    setTimeout(() => { try { tg && tg.close(); } catch (e) {} }, 450);
+  }
+
+  $("saveBtn").addEventListener("click", saveSettings);
+  $("resetBtn").addEventListener("click", () => {
+    applySettings(DEFAULTS);
+    haptic("medium");
+    toast("Настройки сброшены. Нажми «Сохранить».");
+  });
+
+  /* ---------------- INIT ---------------- */
+  (function init() {
+    applySettings(DEFAULTS);
+
+    const encoded = params.get("s");
+    if (encoded) {
+      try {
+        let b64 = encoded.replace(/-/g, "+").replace(/_/g, "/");
+        while (b64.length % 4) b64 += "=";
+        const decoded = JSON.parse(decodeURIComponent(escape(atob(b64))));
+        if (decoded.settings) applySettings(decoded.settings);
+        else applySettings(decoded);
+        if (decoded.state) applyState(decoded.state);
+      } catch (e) {
+        console.error("URL state error:", e);
+      }
+    } else {
+      try {
+        const raw = localStorage.getItem("tkrm_settings");
+        if (raw) applySettings(JSON.parse(raw));
+      } catch (e) {}
+    }
+
+    refreshDashboard();
+    if (INIT_DATA && API_BASE) refreshState(true);
+  })();
+</script>
+</body>
+</html>

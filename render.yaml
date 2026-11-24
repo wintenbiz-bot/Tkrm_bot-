@@ -1,0 +1,31 @@
+services:
+  - type: web
+    name: tkrm-control
+    runtime: python
+    # Бесплатные инстансы Render засыпают — sniper-боту нужен всегда онлайн.
+    plan: starter
+    region: europe-west
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn server:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.11.9"
+      - key: PYTHONUNBUFFERED
+        value: "1"
+      - key: BOT_TOKEN
+        sync: false
+      - key: WEBAPP_URL
+        sync: false
+      - key: PUBLIC_URL
+        sync: false
+      - key: USERS_FILE
+        value: /opt/render/project/src/data/users.json
+      - key: PNL_CACHE_FILE
+        value: /opt/render/project/src/data/pnl_cache.json
+      - key: DATA_DIR
+        value: /opt/render/project/src/data
+    disk:
+      name: tkrm-data
+      mountPath: /opt/render/project/src/data
+      sizeGB: 1
