@@ -29,7 +29,7 @@ except ImportError:  # pragma: no cover
 
 from fastapi import Body, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, Response
 from fastapi.staticfiles import StaticFiles
 
 import main_multiuser as core
@@ -379,6 +379,12 @@ async def api_session_settings(payload: dict = Body(...)):
         await core.stop_order_refresh_loop(telegram_id)
 
     return {"ok": True, **session_state(telegram_id)}
+
+
+@app.get("/favicon.ico", include_in_schema=False)
+def favicon():
+    """Браузер всё равно просит /favicon.ico — убираем 404 из логов."""
+    return Response(status_code=204)
 
 
 # ============================================================

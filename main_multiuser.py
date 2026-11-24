@@ -36,6 +36,7 @@ from aiogram.types import (
     ReplyKeyboardMarkup,
     KeyboardButton,
     CallbackQuery,
+    ChosenInlineResult,
 )
 
 # Настройка логирования
@@ -5579,6 +5580,56 @@ async def process_profit_pagination(callback: CallbackQuery):
         await callback.message.edit_text(text, reply_markup=kb, parse_mode=ParseMode.HTML)
     
     await callback.answer()
+
+
+# ============================================================
+# НЕОБРАБОТАННЫЕ АПДЕЙТЫ — ЧТОБЫ НЕ БЫЛО "Update is not handled"
+# ============================================================
+
+@dp.chosen_inline_result()
+async def process_chosen_inline_result(result: ChosenInlineResult):
+    """
+    Пользователь выбрал inline-результат. Сам токен уже применён в
+    inline_query, поэтому здесь достаточно просто «съесть» апдейт.
+    """
+    logger.info(
+        "✅ [INLINE] выбран результат: result_id=%s query=%r",
+        result.result_id,
+        result.query,
+    )
+
+
+@dp.message()
+async def process_unhandled_message(message: Message):
+    """
+    Последний message-хендлер. Ловит всё, что не попало в остальные,
+    например сообщение от inline-результата «✅ AUTH_TOKEN обновлён».
+    """
+    text = (message.text or "").strip()
+
+    # Inline-результат уже подтвердил пользователя — второй ответ не нужен.
+    if text.startswith("✅ AUTH_TOKEN обновлён"):
+        logger.info("🔑 [INLINE] подтверждение токена получено, доп. ответ не нужен")
+        return
+
+    user_id = message.from_user.id if message.from_user else None
+    logger.warning(
+        "⚠️ Необработанное сообщение: %r from=%s",
+        text[:200],
+        user_id,
+    )
+
+    if text.startswith("/"):
+        await message.answer(
+            "Не знаю такую команду.\n\n"
+            "Открой Mini App через кнопку бота или нажми /start."
+        )
+    else:
+        await message.answer(
+            "Не понял сообщение. Открой Mini App через кнопку бота "
+            "или нажми /start."
+        )
+
 
 # ============================================================
 # MAIN
