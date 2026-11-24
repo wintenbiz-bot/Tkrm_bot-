@@ -555,7 +555,9 @@
   }
 
   function api(path, payload) {
-    if (!API_BASE || !INIT_DATA) return Promise.reject(new Error("API недоступен"));
+    // API_BASE === "" — это нормально: Mini App открыта с того же домена,
+    // что и API (Render). Пустая строка НЕ означает «API недоступен».
+    if (!INIT_DATA) return Promise.reject(new Error("Нет initData — открой Mini App из Telegram"));
     return fetch(API_BASE + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -867,7 +869,7 @@
     }
 
     refreshDashboard();
-    if (INIT_DATA && API_BASE) refreshState(true);
+    if (INIT_DATA) refreshState(true);
   })();
 </script>
 </body>
