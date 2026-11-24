@@ -1,0 +1,2046 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+
+  <title>MRKT Sniper Control</title>
+  <meta name="theme-color" content="#0b0d12">
+
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <style>
+    :root {
+      --bg: #0b0d12;
+      --bg2: #11141b;
+      --card: rgba(25, 29, 38, 0.92);
+      --card2: rgba(31, 36, 47, 0.95);
+
+      --accent: #248bf5;
+      --accent2: #5ca9ff;
+      --green: #2ecc71;
+      --red: #ff5c68;
+      --orange: #ffad42;
+      --purple: #9b7cff;
+
+      --text: #ffffff;
+      --muted: #8f97a7;
+      --border: rgba(255,255,255,0.07);
+
+      --shadow:
+        0 12px 35px rgba(0,0,0,0.32);
+
+      --radius: 18px;
+    }
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html {
+      background: var(--bg);
+    }
+
+    body {
+      margin: 0;
+      padding:
+        0
+        14px
+        calc(env(safe-area-inset-bottom) + 25px);
+
+      min-height: 100vh;
+
+      background:
+        radial-gradient(
+          circle at 10% 0%,
+          rgba(36,139,245,.15),
+          transparent 30%
+        ),
+        radial-gradient(
+          circle at 90% 10%,
+          rgba(155,124,255,.10),
+          transparent 28%
+        ),
+        var(--bg);
+
+      color: var(--text);
+      font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        Roboto,
+        Helvetica,
+        Arial,
+        sans-serif;
+    }
+
+    button,
+    input {
+      font: inherit;
+    }
+
+    .container {
+      max-width: 620px;
+      margin: 0 auto;
+    }
+
+    /* HEADER */
+
+    /* Базовый отступ — для десктопа */
+    .header {
+      padding: calc(env(safe-area-inset-top, 0px) + 24px) 4px 20px;
+    }
+    
+    /* Мобильные — большой отступ под хедер Telegram */
+    @media (max-width: 900px) and (pointer: coarse) {
+      .header {
+        padding: calc(env(safe-area-inset-top, 0px) + 90px) 4px 20px;
+      }
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-icon {
+      width: 46px;
+      height: 46px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 15px;
+
+      background:
+        linear-gradient(
+          135deg,
+          rgba(36,139,245,.95),
+          rgba(93,90,255,.95)
+        );
+
+      box-shadow:
+        0 8px 25px rgba(36,139,245,.28);
+
+      font-size: 23px;
+    }
+
+    .title {
+      font-size: 21px;
+      font-weight: 800;
+      letter-spacing: -.4px;
+    }
+
+    .subtitle {
+      margin-top: 3px;
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    .live {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+
+      padding: 7px 10px;
+
+      border: 1px solid rgba(46,204,113,.18);
+      border-radius: 20px;
+
+      color: var(--green);
+      background: rgba(46,204,113,.08);
+
+      font-size: 11px;
+      font-weight: 700;
+    }
+
+    .live-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+
+      box-shadow: 0 0 10px rgba(46,204,113,.8);
+
+      animation: pulse 1.7s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+      }
+
+      50% {
+        opacity: .45;
+        transform: scale(.75);
+      }
+    }
+
+    /* DASHBOARD */
+
+    .dashboard {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 9px;
+      margin-bottom: 14px;
+    }
+
+    .stat {
+      padding: 13px 10px;
+
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 15px;
+
+      box-shadow: var(--shadow);
+    }
+
+    .stat-icon {
+      font-size: 15px;
+      margin-bottom: 6px;
+    }
+
+    .stat-value {
+      font-size: 17px;
+      font-weight: 800;
+    }
+
+    .stat-label {
+      margin-top: 2px;
+      color: var(--muted);
+      font-size: 10px;
+    }
+
+    /* SECTION */
+
+    .section {
+      margin-bottom: 14px;
+    }
+
+    /* CARD */
+
+    .card {
+      padding: 4px;
+
+      background: var(--card);
+
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+
+      box-shadow: var(--shadow);
+
+      backdrop-filter: blur(16px);
+    }
+
+    .setting {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      gap: 14px;
+
+      padding: 14px 12px;
+
+      border-bottom: 1px solid var(--border);
+    }
+
+    .setting:last-child {
+      border-bottom: none;
+    }
+
+    .setting-left {
+      display: flex;
+      align-items: center;
+      gap: 11px;
+
+      min-width: 0;
+    }
+
+    .setting-icon {
+      width: 37px;
+      height: 37px;
+
+      flex: 0 0 37px;
+
+      display: flex;
+      align-items: center;
+      justify-content: center;
+
+      border-radius: 12px;
+
+      background: rgba(255,255,255,.055);
+
+      font-size: 17px;
+    }
+
+    .setting-title {
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .setting-desc {
+      margin-top: 3px;
+
+      color: var(--muted);
+
+      font-size: 10px;
+      line-height: 1.35;
+    }
+
+    /* SWITCH */
+
+    .switch {
+      position: relative;
+
+      width: 48px;
+      height: 28px;
+
+      flex: 0 0 48px;
+    }
+
+    .switch input {
+      display: none;
+    }
+
+    .slider {
+      position: absolute;
+      inset: 0;
+
+      cursor: pointer;
+
+      border-radius: 30px;
+
+      background: #303541;
+
+      transition: .2s;
+    }
+
+    .slider::before {
+      content: "";
+
+      position: absolute;
+
+      width: 22px;
+      height: 22px;
+
+      left: 3px;
+      top: 3px;
+
+      border-radius: 50%;
+
+      background: white;
+
+      transition: .2s;
+
+      box-shadow: 0 2px 5px rgba(0,0,0,.3);
+    }
+
+    .switch input:checked + .slider {
+      background: var(--green);
+    }
+
+    .switch input:checked + .slider::before {
+      transform: translateX(20px);
+    }
+
+    /* INPUT */
+
+    .input-row {
+      display: flex;
+      gap: 8px;
+
+      padding: 12px;
+    }
+
+    .input-box {
+      flex: 1;
+    }
+
+    .input-label {
+      display: block;
+
+      margin-bottom: 6px;
+
+      color: var(--muted);
+
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    .input {
+      width: 100%;
+
+      padding: 11px 12px;
+
+      color: white;
+      background: rgba(255,255,255,.055);
+
+      border: 1px solid var(--border);
+      border-radius: 11px;
+
+      outline: none;
+
+      transition: .2s;
+    }
+
+    .input:focus {
+      border-color: rgba(36,139,245,.65);
+
+      background: rgba(36,139,245,.06);
+    }
+
+    /* RANGE */
+
+    .range-card {
+      padding: 15px 13px;
+    }
+
+    .range-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      margin-bottom: 10px;
+    }
+
+    .range-title {
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .range-value {
+      padding: 5px 8px;
+
+      color: var(--accent2);
+
+      border-radius: 8px;
+
+      background: rgba(36,139,245,.1);
+
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    input[type="range"] {
+      width: 100%;
+      height: 5px;
+
+      appearance: none;
+
+      border-radius: 10px;
+
+      background: #303541;
+
+      outline: none;
+    }
+
+    input[type="range"]::-webkit-slider-thumb {
+      appearance: none;
+
+      width: 21px;
+      height: 21px;
+
+      border-radius: 50%;
+
+      background: var(--accent);
+
+      border: 3px solid #fff;
+
+      box-shadow: 0 2px 10px rgba(36,139,245,.35);
+    }
+
+    .presets {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 7px;
+
+      margin-top: 11px;
+    }
+
+    .preset {
+      padding: 8px 4px;
+
+      border: 1px solid var(--border);
+      border-radius: 9px;
+
+      color: #aeb5c2;
+      background: rgba(255,255,255,.035);
+
+      font-size: 10px;
+      font-weight: 700;
+
+      cursor: pointer;
+    }
+
+    .preset:active {
+      transform: scale(.97);
+    }
+
+    /* FILTERS */
+
+    .filters {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 7px;
+
+      padding: 12px;
+    }
+
+    .filter {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+
+      padding: 10px;
+
+      border: 1px solid var(--border);
+      border-radius: 11px;
+
+      background: rgba(255,255,255,.025);
+
+      cursor: pointer;
+    }
+
+    .filter input {
+      accent-color: var(--accent);
+    }
+
+    .filter-text {
+      font-size: 10px;
+      font-weight: 600;
+    }
+
+    /* COLLAPSIBLE SECTION */
+
+    .collapsible {
+      overflow: hidden;
+
+      border-radius: var(--radius);
+      border: 1px solid var(--border);
+
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .collapsible > summary {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+
+      padding: 15px 14px;
+
+      cursor: pointer;
+
+      color: #e8ebf1;
+
+      font-size: 13px;
+      font-weight: 800;
+
+      list-style: none;
+      user-select: none;
+    }
+
+    .collapsible > summary::-webkit-details-marker {
+      display: none;
+    }
+
+    .collapsible > summary .hint {
+      color: var(--muted);
+      font-size: 10px;
+      font-weight: 500;
+      margin-left: auto;
+      margin-right: 12px;
+    }
+
+    .collapsible > summary::after {
+      content: "⌄";
+
+      color: var(--muted);
+
+      font-size: 14px;
+
+      transition: .2s;
+
+      flex: 0 0 auto;
+    }
+
+    .collapsible[open] > summary::after {
+      transform: rotate(180deg);
+    }
+
+    .collapsible .card {
+      border: none;
+      border-radius: 0;
+      box-shadow: none;
+      background: transparent;
+      border-top: 1px solid var(--border);
+      padding: 0;
+    }
+
+    /* BUTTONS */
+
+    .buttons {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px;
+
+      margin-top: 15px;
+    }
+
+    .button {
+      min-height: 48px;
+
+      border: none;
+      border-radius: 14px;
+
+      font-size: 12px;
+      font-weight: 800;
+
+      cursor: pointer;
+
+      transition: transform .15s, opacity .15s;
+    }
+
+    .button:active {
+      transform: scale(.98);
+    }
+
+    .button-secondary {
+      color: #b7bfce;
+
+      border: 1px solid var(--border);
+
+      background: rgba(255,255,255,.04);
+    }
+
+    /* SAVE */
+
+    .save-button {
+      width: 100%;
+
+      min-height: 53px;
+
+      margin-top: 10px;
+
+      border: none;
+      border-radius: 16px;
+
+      color: white;
+
+      background:
+        linear-gradient(
+          135deg,
+          #248bf5,
+          #6672ff
+        );
+
+      box-shadow:
+        0 10px 30px rgba(36,139,245,.28);
+
+      font-size: 14px;
+      font-weight: 850;
+
+      cursor: pointer;
+    }
+
+    .save-button:active {
+      transform: scale(.985);
+    }
+
+    /* FOOTER */
+
+    .footer {
+      padding: 17px 0 3px;
+
+      text-align: center;
+
+      color: #656d7d;
+
+      font-size: 9px;
+      line-height: 1.5;
+    }
+
+    /* TOAST */
+
+    .toast {
+      position: fixed;
+
+      left: 50%;
+      bottom: calc(env(safe-area-inset-bottom) + 20px);
+
+      transform:
+        translateX(-50%)
+        translateY(20px);
+
+      width: calc(100% - 40px);
+      max-width: 500px;
+
+      padding: 12px 15px;
+
+      border: 1px solid var(--border);
+      border-radius: 13px;
+
+      background: rgba(25,29,38,.96);
+
+      box-shadow: 0 15px 35px rgba(0,0,0,.4);
+
+      text-align: center;
+
+      font-size: 11px;
+      font-weight: 700;
+
+      opacity: 0;
+      pointer-events: none;
+
+      transition: .25s;
+
+      z-index: 999;
+    }
+
+    .toast.show {
+      opacity: 1;
+
+      transform:
+        translateX(-50%)
+        translateY(0);
+    }
+
+    /* RESPONSIVE */
+
+    @media (max-width: 390px) {
+      .dashboard {
+        gap: 6px;
+      }
+
+      .stat {
+        padding: 11px 8px;
+      }
+
+      .filters {
+        grid-template-columns: 1fr;
+      }
+
+      .input-row {
+        flex-direction: column;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+
+  <div class="header">
+
+    <div class="header-top">
+
+      <div class="brand">
+
+        <div class="brand-icon">
+          🎯
+        </div>
+
+        <div>
+          <div class="title">
+            MRKT Sniper
+          </div>
+
+          <div class="subtitle">
+            Управление автоматическим снайпером
+          </div>
+        </div>
+
+      </div>
+
+      <div class="live">
+        <span class="live-dot"></span>
+        LIVE
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- DASHBOARD -->
+
+  <div class="dashboard">
+
+    <div class="stat">
+      <div class="stat-icon">⚡</div>
+      <div class="stat-value">AUTO</div>
+      <div class="stat-label">Режим</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-icon">🛒</div>
+      <div class="stat-value" id="dashboardBuy">
+        OFF
+      </div>
+      <div class="stat-label">Покупка</div>
+    </div>
+
+    <div class="stat">
+      <div class="stat-icon">💎</div>
+      <div class="stat-value" id="dashboardOffer">
+        OFF
+      </div>
+      <div class="stat-label">Офферы</div>
+    </div>
+
+  </div>
+
+
+  <!-- AUTOMATION -->
+
+  <div class="section">
+
+    <details class="collapsible" open>
+
+      <summary>
+        <span>⚙️ Автоматизация</span>
+        <span class="hint">Основные функции</span>
+      </summary>
+
+      <div class="card">
+
+        <!-- AUTO BUY -->
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              🛒
+            </div>
+
+            <div>
+              <div class="setting-title">
+                Авто-покупка
+              </div>
+
+              <div class="setting-desc">
+                Автоматически выкупать подходящие лоты
+              </div>
+            </div>
+
+          </div>
+
+          <label class="switch">
+            <input
+              type="checkbox"
+              id="autoBuy"
+              onchange="updateDashboard()"
+            >
+            <span class="slider"></span>
+          </label>
+
+        </div>
+
+
+        <!-- AUTO OFFER -->
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              💎
+            </div>
+
+            <div>
+              <div class="setting-title">
+                Авто-оффер
+              </div>
+
+              <div class="setting-desc">
+                Автоматически выставлять предложения
+              </div>
+            </div>
+
+          </div>
+
+          <label class="switch">
+            <input
+              type="checkbox"
+              id="autoOffer"
+              onchange="updateDashboard()"
+            >
+            <span class="slider"></span>
+          </label>
+
+        </div>
+
+
+        <!-- NOTIFICATIONS -->
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              🔔
+            </div>
+
+            <div>
+              <div class="setting-title">
+                Telegram уведомления
+              </div>
+
+              <div class="setting-desc">
+                Отправлять карточки найденных подарков
+              </div>
+            </div>
+
+          </div>
+
+          <label class="switch">
+
+            <input
+              type="checkbox"
+              id="notifications"
+            >
+
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+        <!-- BLACK / ONYX NOTIFICATIONS -->
+        <div class="setting">
+          <div class="setting-left">
+            <div class="setting-icon">🖤</div>
+            <div>
+              <div class="setting-title">Black / Onyx Black уведомления</div>
+              <div class="setting-desc">Отдельный тумблер для чёрных фонов</div>
+            </div>
+          </div>
+          <label class="switch">
+            <input type="checkbox" id="notificationsBlackOnyx">
+            <span class="slider"></span>
+          </label>
+        </div>
+
+
+        <!-- DEDUP -->
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              ♻️
+            </div>
+
+            <div>
+              <div class="setting-title">
+                Защита от повторов
+              </div>
+
+              <div class="setting-desc">
+                Не обрабатывать один и тот же лот повторно
+              </div>
+            </div>
+
+          </div>
+
+          <label class="switch">
+
+            <input
+              type="checkbox"
+              id="dedup"
+            >
+
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- BUY SETTINGS -->
+
+  <div class="section">
+
+    <details class="collapsible" open>
+
+      <summary>
+        <span>🚀 Настройки покупки</span>
+        <span class="hint">BUY</span>
+      </summary>
+
+      <div class="card">
+
+        <div class="range-card">
+
+          <div class="range-top">
+
+            <div class="range-title">
+              Максимальный множитель к флору
+            </div>
+
+            <div
+              class="range-value"
+              id="multiplierValue"
+            >
+              1.02x
+            </div>
+
+          </div>
+
+          <input
+            type="range"
+            id="maxMultiplier"
+            min="0.50"
+            max="1.20"
+            step="0.01"
+            value="1.02"
+            oninput="updateMultiplier()"
+          >
+
+          <div class="presets">
+
+            <button
+              class="preset"
+              onclick="setMultiplier(0.95)"
+            >
+              0.95x
+            </button>
+
+            <button
+              class="preset"
+              onclick="setMultiplier(1.00)"
+            >
+              1.00x
+            </button>
+
+            <button
+              class="preset"
+              onclick="setMultiplier(1.02)"
+            >
+              1.02x
+            </button>
+
+            <button
+              class="preset"
+              onclick="setMultiplier(1.05)"
+            >
+              1.05x
+            </button>
+
+          </div>
+
+        </div>
+
+
+        <div class="input-row">
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Минимальная цена
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="minPrice"
+              placeholder="0"
+              min="0"
+              step="0.01"
+            >
+
+          </div>
+
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Максимальная цена
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="maxPrice"
+              placeholder="Без лимита"
+              min="0"
+              step="0.01"
+            >
+
+          </div>
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Ордер №1, % от флора
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="orderDiscount1"
+              value="30"
+              min="1"
+              max="99"
+              step="1"
+            >
+
+          </div>
+
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Ордер №2, % от флора
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="orderDiscount2"
+              value="50"
+              min="1"
+              max="99"
+              step="1"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- OFFER -->
+
+  <div class="section">
+
+    <details class="collapsible">
+
+      <summary>
+        <span>💎 Настройки офферов</span>
+        <span class="hint">OFFER</span>
+      </summary>
+
+      <div class="card">
+
+        <div class="input-row">
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Множитель оффера
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="offerMultiplier"
+              value="1.01"
+              min="0"
+              step="0.01"
+            >
+
+          </div>
+
+        </div>
+
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- EVENT FILTERS -->
+
+  <div class="section">
+
+    <details class="collapsible">
+
+      <summary>
+        <span>🛡 Фильтр событий</span>
+        <span class="hint">SKIP</span>
+      </summary>
+
+      <div class="card">
+
+        <div class="filters">
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipLuckyBuy"
+            >
+
+            <span class="filter-text">
+              🍀 Lucky Buy
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipPurchase"
+            >
+
+            <span class="filter-text">
+              🛒 Покупки
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipWithdraw"
+            >
+
+            <span class="filter-text">
+              📤 Вывод
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipRemoveSale"
+            >
+
+            <span class="filter-text">
+              ❌ Снятие с продажи
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipUnlisted"
+            >
+
+            <span class="filter-text">
+              🚫 Unlisted
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipCancelSale"
+            >
+
+            <span class="filter-text">
+              🗑 Cancel Sale
+            </span>
+          </label>
+
+
+          <label class="filter">
+            <input
+              type="checkbox"
+              id="skipInactive"
+            >
+
+            <span class="filter-text">
+              ⚠️ isOnSale=false
+            </span>
+          </label>
+
+        </div>
+
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- ADVANCED -->
+
+  <div class="section">
+
+    <details class="collapsible">
+
+      <summary>
+        <span>🧠 Расширенные</span>
+        <span class="hint">POLLING · AUTO-REFRESH</span>
+      </summary>
+
+      <div class="card">
+
+        <div class="input-row">
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Интервал polling, сек
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="pollInterval"
+              value="3"
+              min="0.2"
+              step="0.1"
+            >
+
+          </div>
+
+        </div>
+
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              🔄
+            </div>
+
+            <div>
+
+              <div class="setting-title">
+                Авто-обновление ордеров
+              </div>
+
+              <div class="setting-desc">
+                Переставлять ордера при изменении флора
+              </div>
+
+            </div>
+
+          </div>
+
+          <label class="switch">
+
+            <input
+              type="checkbox"
+              id="autoRefreshOrders"
+            >
+
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+
+        <div class="input-row">
+
+          <div class="input-box">
+
+            <label class="input-label">
+              Интервал авто-обновления, сек
+            </label>
+
+            <input
+              class="input"
+              type="number"
+              id="autoRefreshInterval"
+              value="300"
+              min="30"
+              step="10"
+            >
+
+          </div>
+
+        </div>
+
+
+        <div class="setting">
+
+          <div class="setting-left">
+
+            <div class="setting-icon">
+              📳
+            </div>
+
+            <div>
+
+              <div class="setting-title">
+                Haptic Feedback
+              </div>
+
+              <div class="setting-desc">
+                Вибрация интерфейса Telegram
+              </div>
+
+            </div>
+
+          </div>
+
+          <label class="switch">
+
+            <input
+              type="checkbox"
+              id="haptic"
+            >
+
+            <span class="slider"></span>
+
+          </label>
+
+        </div>
+
+      </div>
+    </details>
+
+  </div>
+
+
+  <!-- BUTTONS -->
+
+  <div class="buttons">
+
+    <button
+      class="button button-secondary"
+      onclick="resetSettings()"
+    >
+      ↩️ Сбросить
+    </button>
+
+    <button
+      class="button button-secondary"
+      onclick="testHaptic()"
+    >
+      📳 Тест вибрации
+    </button>
+
+  </div>
+
+
+  <!-- SAVE -->
+
+  <button
+    class="save-button"
+    onclick="saveAndClose()"
+  >
+    💾 Сохранить настройки
+  </button>
+
+
+  <div class="footer">
+    MRKT Sniper Control v2.1<br>
+    Настройки передаются боту через Telegram WebApp
+  </div>
+
+</div>
+
+
+<!-- TOAST -->
+
+<div
+  class="toast"
+  id="toast"
+>
+  Настройки сохранены
+</div>
+
+
+<script>
+
+  const tg = window.Telegram.WebApp;
+
+  tg.ready();
+  tg.expand();
+
+  // ---------------------------------------------------------
+  // Fullscreen только на мобильных.
+  // На ПК Telegram разворачивает WebApp на весь экран,
+  // и вернуть его в окошко невозможно.
+  // ---------------------------------------------------------
+  const isDesktop = (() => {
+    // 1) Сам Telegram знает платформу
+    const platform = (tg.platform || "").toLowerCase();
+    if (platform === "tdesktop" || platform === "web" ||
+        platform === "macos" || platform === "weba") {
+      return true;
+    }
+    if (platform === "ios" || platform === "android") {
+      return false;
+    }
+
+    // 2) Fallback: определяем по user-agent / размеру экрана
+    const ua = navigator.userAgent || "";
+    const uaDesktop = /Windows|Macintosh|Linux|X11/i.test(ua) &&
+                      !/Android|iPhone|iPad|iPod/i.test(ua);
+    const wideScreen = window.innerWidth >= 900;
+
+    return uaDesktop || wideScreen;
+  })();
+
+  if (!isDesktop && typeof tg.requestFullscreen === "function") {
+    try {
+      tg.requestFullscreen();
+    } catch (e) {
+      console.log("fullscreen error:", e);
+    }
+  }
+
+  try {
+    tg.setHeaderColor("#0b0d12");
+    tg.setBackgroundColor("#0b0d12");
+    if (tg.setBottomBarColor) {
+      tg.setBottomBarColor("#0b0d12");
+    }
+  } catch (e) {
+    console.log("theme error:", e);
+  }
+
+
+  /* =========================
+     HELPERS
+  ========================= */
+
+  function el(id) {
+    return document.getElementById(id);
+  }
+
+
+  function showToast(text) {
+
+    const toast = el("toast");
+
+    toast.textContent = text;
+
+    toast.classList.add("show");
+
+    setTimeout(() => {
+      toast.classList.remove("show");
+    }, 1800);
+
+  }
+
+
+  function haptic(type = "light") {
+
+    const enabled = el("haptic")?.checked;
+
+    if (!enabled) {
+      return;
+    }
+
+    try {
+
+      if (
+        tg.HapticFeedback &&
+        tg.HapticFeedback.impactOccurred
+      ) {
+
+        tg.HapticFeedback.impactOccurred(type);
+
+      }
+
+    } catch (e) {
+      console.log(e);
+    }
+
+  }
+
+
+  /* =========================
+     DASHBOARD
+  ========================= */
+
+  function updateDashboard() {
+
+    const buy = el("autoBuy").checked;
+    const offer = el("autoOffer").checked;
+
+    el("dashboardBuy").textContent =
+      buy ? "ON" : "OFF";
+
+    el("dashboardOffer").textContent =
+      offer ? "ON" : "OFF";
+
+  }
+
+
+  /* =========================
+     MULTIPLIER
+  ========================= */
+
+  function updateMultiplier() {
+
+    const value =
+      parseFloat(el("maxMultiplier").value);
+
+    el("multiplierValue").textContent =
+      value.toFixed(2) + "x";
+
+  }
+
+
+  function setMultiplier(value) {
+
+    el("maxMultiplier").value = value;
+
+    updateMultiplier();
+
+    haptic("light");
+
+  }
+
+
+  /* =========================
+     LOCAL STORAGE
+  ========================= */
+
+  const STORAGE_KEY =
+    "mrkt_sniper_settings_v3";
+
+
+  function collectSettings() {
+
+    return {
+
+      auto_buy:
+        el("autoBuy").checked,
+
+      auto_offer:
+        el("autoOffer").checked,
+
+      notifications:
+        el("notifications").checked,
+
+      notifications_black_onyx:
+        el("notificationsBlackOnyx").checked,
+
+      dedup:
+        el("dedup").checked,
+
+
+      max_multiplier:
+        parseFloat(
+          el("maxMultiplier").value
+        ) || 1.02,
+
+
+      min_price:
+        parseFloat(
+          el("minPrice").value
+        ) || 0,
+
+      max_price:
+        parseFloat(
+          el("maxPrice").value
+        ) || 0,
+
+      order_discount_1:
+        parseFloat(
+          el("orderDiscount1").value
+        ) || 30,
+
+      order_discount_2:
+        parseFloat(
+          el("orderDiscount2").value
+        ) || 50,
+
+      offer_multiplier:
+        parseFloat(
+          el("offerMultiplier").value
+        ) || 1.01,
+
+
+      skip_lucky_buy:
+        el("skipLuckyBuy").checked,
+
+      skip_purchase:
+        el("skipPurchase").checked,
+
+      skip_withdraw:
+        el("skipWithdraw").checked,
+
+      skip_remove_sale:
+        el("skipRemoveSale").checked,
+
+      skip_unlisted:
+        el("skipUnlisted").checked,
+
+      skip_cancel_sale:
+        el("skipCancelSale").checked,
+
+      skip_inactive:
+        el("skipInactive").checked,
+
+
+      poll_interval:
+        parseFloat(
+          el("pollInterval").value
+        ) || 3,
+
+
+      auto_refresh_orders:
+        el("autoRefreshOrders").checked,
+
+
+      auto_refresh_interval:
+        parseFloat(
+          el("autoRefreshInterval").value
+        ) || 300,
+
+
+      haptic:
+        el("haptic").checked
+
+    };
+
+  }
+
+
+  function saveLocal() {
+
+    const settings =
+      collectSettings();
+
+    try {
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(settings)
+      );
+
+    } catch (e) {
+
+      console.log(
+        "localStorage error:",
+        e
+      );
+
+    }
+
+  }
+
+
+  function applySettings(s) {
+
+    if (typeof s.auto_buy === "boolean")
+      el("autoBuy").checked = s.auto_buy;
+
+    if (typeof s.auto_offer === "boolean")
+      el("autoOffer").checked = s.auto_offer;
+
+    if (typeof s.notifications === "boolean")
+      el("notifications").checked = s.notifications;
+
+    if (typeof s.notifications_black_onyx === "boolean")
+      el("notificationsBlackOnyx").checked = s.notifications_black_onyx;
+
+    if (typeof s.dedup === "boolean")
+      el("dedup").checked = s.dedup;
+
+
+    if (s.max_multiplier != null)
+      el("maxMultiplier").value = s.max_multiplier;
+
+    if (s.min_price != null)
+      el("minPrice").value = s.min_price || "";
+
+    if (s.max_price != null)
+      el("maxPrice").value = s.max_price || "";
+
+    if (s.order_discount_1 != null)
+      el("orderDiscount1").value = s.order_discount_1;
+
+    if (s.order_discount_2 != null)
+      el("orderDiscount2").value = s.order_discount_2;
+
+    if (s.offer_multiplier != null)
+      el("offerMultiplier").value = s.offer_multiplier;
+
+
+    if (typeof s.skip_lucky_buy === "boolean")
+      el("skipLuckyBuy").checked = s.skip_lucky_buy;
+
+    if (typeof s.skip_purchase === "boolean")
+      el("skipPurchase").checked = s.skip_purchase;
+
+    if (typeof s.skip_withdraw === "boolean")
+      el("skipWithdraw").checked = s.skip_withdraw;
+
+    if (typeof s.skip_remove_sale === "boolean")
+      el("skipRemoveSale").checked = s.skip_remove_sale;
+
+    if (typeof s.skip_unlisted === "boolean")
+      el("skipUnlisted").checked = s.skip_unlisted;
+
+    if (typeof s.skip_cancel_sale === "boolean")
+      el("skipCancelSale").checked = s.skip_cancel_sale;
+
+    if (typeof s.skip_inactive === "boolean")
+      el("skipInactive").checked = s.skip_inactive;
+
+
+    if (s.poll_interval != null)
+      el("pollInterval").value = s.poll_interval;
+
+    if (typeof s.auto_refresh_orders === "boolean")
+      el("autoRefreshOrders").checked = s.auto_refresh_orders;
+
+    if (s.auto_refresh_interval != null)
+      el("autoRefreshInterval").value = s.auto_refresh_interval;
+
+    if (typeof s.haptic === "boolean")
+      el("haptic").checked = s.haptic;
+
+  }
+
+
+  function loadLocal() {
+
+    try {
+
+      const raw =
+        localStorage.getItem(STORAGE_KEY);
+
+      if (!raw) {
+        return;
+      }
+
+      applySettings(JSON.parse(raw));
+
+    } catch (e) {
+
+      console.log(
+        "load settings error:",
+        e
+      );
+
+    }
+
+  }
+
+
+  /* =========================
+     RESET
+  ========================= */
+
+  function resetSettings() {
+
+    applySettings({
+      auto_buy: false,
+      auto_offer: false,
+      notifications: true,
+      notifications_black_onyx: true,
+      dedup: true,
+      max_multiplier: 1.02,
+      min_price: 0,
+      max_price: 0,
+      order_discount_1: 30,
+      order_discount_2: 50,
+      offer_multiplier: 0.98,
+      skip_lucky_buy: true,
+      skip_purchase: true,
+      skip_withdraw: true,
+      skip_remove_sale: true,
+      skip_unlisted: true,
+      skip_cancel_sale: true,
+      skip_inactive: true,
+      poll_interval: 3,
+      auto_refresh_orders: false,
+      auto_refresh_interval: 300,
+      haptic: true
+    });
+
+    updateMultiplier();
+    updateDashboard();
+
+    localStorage.removeItem(STORAGE_KEY);
+
+    haptic("medium");
+
+    showToast("Настройки сброшены");
+
+  }
+
+
+  /* =========================
+     HAPTIC TEST
+  ========================= */
+
+  function testHaptic() {
+
+    try {
+
+      if (
+        tg.HapticFeedback &&
+        tg.HapticFeedback.notificationOccurred
+      ) {
+
+        tg.HapticFeedback.notificationOccurred(
+          "success"
+        );
+
+      }
+
+    } catch (e) {
+      console.log(e);
+    }
+
+    showToast("📳 Вибрация отправлена");
+
+  }
+
+
+  /* =========================
+     SAVE
+  ========================= */
+
+  function saveAndClose() {
+
+    const settings = collectSettings();
+
+    saveLocal();
+
+    haptic("medium");
+
+    showToast("Настройки сохранены");
+
+
+    try {
+
+      tg.sendData(
+        JSON.stringify(settings)
+      );
+
+    } catch (e) {
+
+      console.error(
+        "Telegram sendData error:",
+        e
+      );
+
+    }
+
+
+    setTimeout(() => {
+
+      try {
+        tg.close();
+      } catch (e) {
+        console.log(e);
+      }
+
+    }, 500);
+
+  }
+
+
+  /* =========================
+     COLLAPSIBLE STATE
+  ========================= */
+
+  function restoreCollapsibleState() {
+
+    document
+      .querySelectorAll("details.collapsible")
+      .forEach((det, idx) => {
+
+        const key = "mrkt_details_" + idx;
+
+        const saved = localStorage.getItem(key);
+
+        if (saved === "1") det.open = true;
+        if (saved === "0") det.open = false;
+
+        det.addEventListener("toggle", () => {
+          localStorage.setItem(key, det.open ? "1" : "0");
+        });
+
+      });
+
+  }
+
+
+  /* =========================
+     INIT
+  ========================= */
+
+  const urlParams = new URLSearchParams(window.location.search);
+  const encoded = urlParams.get("s");
+
+  if (encoded) {
+
+    try {
+
+      let b64 = encoded
+        .replace(/-/g, "+")
+        .replace(/_/g, "/");
+
+      while (b64.length % 4) b64 += "=";
+
+      const decoded = JSON.parse(
+        decodeURIComponent(escape(atob(b64)))
+      );
+
+      applySettings(decoded);
+
+      console.log("✅ Настройки загружены из бота");
+
+    } catch (e) {
+
+      console.error("Ошибка URL-настроек:", e);
+      loadLocal();
+
+    }
+
+  } else {
+
+    loadLocal();
+
+  }
+
+  updateMultiplier();
+  updateDashboard();
+  restoreCollapsibleState();
+
+
+  /*
+    Автосохранение при изменении.
+  */
+
+  document
+    .querySelectorAll("input")
+    .forEach(input => {
+
+      input.addEventListener(
+        "change",
+        () => {
+          saveLocal();
+        }
+      );
+
+    });
+
+</script>
+
+</body>
+</html>
