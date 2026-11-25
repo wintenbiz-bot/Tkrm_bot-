@@ -1122,6 +1122,7 @@ async def order_refresh_loop(telegram_id: int):
                         result = await orders_mgr.refresh_orders_if_floor_changed(
                             client=client,
                             file_path="orders_to_create.json",
+                            floor_state_file=f"floor_state_{telegram_id}.json",
                             discount_1=SETTINGS.get("order_discount_1", 30.0),
                             discount_2=SETTINGS.get("order_discount_2", 50.0),
                         )

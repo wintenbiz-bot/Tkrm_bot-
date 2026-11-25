@@ -4,6 +4,7 @@ users.json
 pnl_cache.json
 purchase_cache.json
 history_cache/
+floor_state*.json
 backups/
 
 # Python

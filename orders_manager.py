@@ -1,8 +1,11 @@
 import asyncio
 import json
-import os
 import logging
+import os
+import time
+from datetime import datetime, timezone
 from decimal import Decimal, ROUND_DOWN
+
 import httpx
 
 # ============================================================
@@ -38,7 +41,76 @@ class OrdersManager:
         "ACTIVE",
         "PUBLISHED",
         "PARTIALLY_FILLED",
+        "CREATED",
+        "OPEN",
+        "PENDING",
     }
+    DEAD_ORDER_STATUSES = {
+        "CANCELLED",
+        "CANCELED",
+        "COMPLETED",
+        "FILLED",
+        "FULLY_FILLED",
+        "EXPIRED",
+        "FINISHED",
+        "CLOSED",
+        "REJECTED",
+        "FAILED",
+    }
+
+    @staticmethod
+    def _parse_time(value) -> float | None:
+        """Разбирает ISO-дату MRKT ('...Z') в Unix timestamp."""
+        if not value:
+            return None
+        try:
+            text = str(value).strip()
+            if text.endswith("Z"):
+                text = text[:-1] + "+00:00"
+            dt = datetime.fromisoformat(text)
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            return dt.timestamp()
+        except (TypeError, ValueError):
+            return None
+
+    def is_order_live(self, order: dict) -> bool:
+        """
+        MRKT в /orders/get-my-orders НЕ возвращает поле status.
+
+        Поэтому раньше все ордера считались неактивными и бот создавал
+        дубли. Живым считаем ордер, у которого не набрано totalQuantity
+        и срок endAt/finishedAt ещё не прошёл. Явный status, если он
+        появится у MRKT, имеет приоритет.
+        """
+        if not isinstance(order, dict):
+            return False
+
+        status = str(
+            order.get("status") or order.get("state") or ""
+        ).strip().upper()
+
+        if status in self.DEAD_ORDER_STATUSES:
+            return False
+        if status in self.LIVE_ORDER_STATUSES:
+            return True
+
+        try:
+            completed = int(order.get("completedQuantity") or 0)
+            total = int(order.get("totalQuantity") or 0)
+        except (TypeError, ValueError):
+            completed = total = 0
+
+        if total > 0 and completed >= total:
+            return False
+
+        now = time.time()
+        for field in ("endAt", "finishedAt"):
+            expiry = self._parse_time(order.get(field))
+            if expiry is not None and expiry <= now:
+                return False
+
+        return True
 
     def __init__(self, headers: dict, *args, **kwargs):
         self.headers = headers
@@ -378,16 +450,21 @@ class OrdersManager:
                 if coll_name != coll_lower:
                     continue
 
-                status = str(o.get("status", "")).strip().upper()
+                status = (
+                    str(o.get("status") or o.get("state") or "").strip().upper()
+                    or "—"
+                )
+                is_live = self.is_order_live(o)
 
                 logger.info(
                     f"🔍 [ORDER] {collection} | "
                     f"id={o.get('id') or o.get('orderId')} | "
                     f"status={status} | "
+                    f"live={is_live} | "
                     f"priceMax={o.get('priceMaxNanoTONs') or o.get('priceMax') or o.get('price')}"
                 )
 
-                if status in self.LIVE_ORDER_STATUSES:
+                if is_live:
                     live.append(o)
 
             return live
@@ -422,17 +499,21 @@ class OrdersManager:
         cancelled = 0
 
         for order in orders:
-            status = str(order.get("status", "")).strip().upper()
+            status = (
+                str(order.get("status") or order.get("state") or "").strip().upper()
+                or "—"
+            )
             order_id = order.get("id") or order.get("orderId")
+            is_live = self.is_order_live(order)
 
             logger.info(
                 f"🔍 [CANCEL CHECK] id={order_id} | "
-                f"status='{status}' | "
+                f"status='{status}' | live={is_live} | "
                 f"coll={order.get('collectionName')} | "
                 f"keys={list(order.keys())}"
             )
 
-            if status not in self.LIVE_ORDER_STATUSES:
+            if not is_live:
                 continue
 
             if not order_id:

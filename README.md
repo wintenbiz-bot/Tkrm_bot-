@@ -44,10 +44,19 @@ Mini App сохраняет его так же, как команда `/auth`, �
 живой статус токена и обратный отсчёт feed, быстрые действия, haptic,
 безопасное сохранение через API с fallback на `tg.sendData`.
 
-### 4. GitHub + Render
+### 4. Ордера
+MRKT в `orders/get-my-orders` не возвращает поле `status`. Бот теперь считает
+ордер активным по `completedQuantity < totalQuantity` и будущему `endAt`,
+поэтому дубликаты не создаются, а команды отмены снова работают.
+
+Состояние флоров хранится отдельно для каждого Telegram ID
+(`floor_state_<id>.json`), поэтому авто-обновление ордеров работает
+на всех аккаунтах, а не только на том, который запустился первым.
+
+### 5. GitHub + Render
 - `requirements.txt` — зависимости;
 - `render.yaml` — Web Service с постоянным диском и health-check;
-- `.gitignore` — исключает `users.json`, кэши и `.env`;
+- `.gitignore` — исключает `users.json`, `floor_state_*.json`, кэши и `.env`;
 - `orders_to_create.json` — список коллекций для ордеров, это конфиг, его нужно коммитить;
 - FastAPI и aiogram запускаются **в одном процессе** (`server.py`), поэтому
   API и бот используют одну и ту же память сессий.
