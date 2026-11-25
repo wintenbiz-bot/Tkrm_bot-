@@ -885,3 +885,135 @@ class OrdersManager:
             f"skipped={result['skipped']}"
         )
         return result
+
+    # ========================================================
+    # CLEANUP DUPLICATES
+    # ========================================================
+
+    async def cleanup_duplicate_orders(
+        self,
+        client: httpx.AsyncClient,
+        file_path: str = "orders_to_create.json",
+        price_tolerance_percent: float = 3.0,
+        dry_run: bool = False,
+    ) -> dict:
+        """
+        Оставляет по одному живому ордеру на каждую цену в коллекции.
+
+        Нужно для старых дублей, которые бот создал, когда MRKT ещё
+        не отдавал поле status и все ордера считались неактивными.
+        Просроченные/отменённые ордера (endAt в прошлом) игнорируются.
+        """
+        result = {
+            "processed": 0,
+            "kept": 0,
+            "duplicates": 0,
+            "cancelled": 0,
+            "would_cancel": 0,
+            "failed": 0,
+            "skipped": 0,
+            "dry_run": dry_run,
+        }
+
+        base_dir = os.path.dirname(os.path.abspath(__file__))
+        full_path = (
+            os.path.join(base_dir, file_path)
+            if not os.path.isabs(file_path)
+            else file_path
+        )
+
+        if not os.path.exists(full_path):
+            logger.error(f"❌ Файл ордеров {full_path} не найден!")
+            return result
+
+        try:
+            with open(full_path, "r", encoding="utf-8") as f:
+                orders = json.load(f)
+        except Exception as e:
+            logger.error(f"❌ Ошибка чтения {full_path}: {e}")
+            return result
+
+        if not isinstance(orders, list):
+            logger.error("❌ Файл ордеров должен содержать список.")
+            return result
+
+        logger.info(
+            f"{'🧪 CLEANUP TEST' if dry_run else '🧹 CLEANUP LIVE'}: "
+            f"проверка {len(orders)} коллекций на дубли"
+        )
+
+        for index, item in enumerate(orders, 1):
+            coll = item.get("collection") if isinstance(item, dict) else item
+            if not coll:
+                result["skipped"] += 1
+                continue
+
+            result["processed"] += 1
+
+            try:
+                live = await self.get_orders_by_collection(client, coll)
+                # Оставляем самый старый ордер в каждой ценовой группе.
+                live.sort(key=lambda o: str(o.get("createdAt") or ""))
+                kept_prices: list[int] = []
+
+                for order in live:
+                    order_id = order.get("id") or order.get("orderId")
+                    raw_price = (
+                        order.get("priceMaxNanoTONs")
+                        or order.get("priceMax")
+                        or order.get("price")
+                        or 0
+                    )
+                    try:
+                        price = int(raw_price)
+                    except (TypeError, ValueError):
+                        price = 0
+
+                    if not order_id or price <= 0:
+                        result["skipped"] += 1
+                        continue
+
+                    is_duplicate = False
+                    for kept_price in kept_prices:
+                        tolerance = max(
+                            1,
+                            int(kept_price * price_tolerance_percent / 100.0),
+                        )
+                        if abs(price - kept_price) <= tolerance:
+                            is_duplicate = True
+                            break
+
+                    if is_duplicate:
+                        result["duplicates"] += 1
+                        if dry_run:
+                            result["would_cancel"] += 1
+                        else:
+                            ok = await self.cancel_order(client, order_id)
+                            if ok:
+                                result["cancelled"] += 1
+                            else:
+                                result["failed"] += 1
+                            await asyncio.sleep(1.0)
+                    else:
+                        kept_prices.append(price)
+                        result["kept"] += 1
+
+                logger.info(
+                    f"🧹 [CLEANUP] {coll}: живых={len(live)}, "
+                    f"оставляю={len(kept_prices)}, дублей={result['duplicates']}"
+                )
+                await asyncio.sleep(1.0)
+
+            except Exception as e:
+                result["failed"] += 1
+                logger.exception(f"❌ Ошибка CLEANUP позиции #{index}: {coll}: {e}")
+
+        logger.info(
+            f"{'🧪 CLEANUP TEST' if dry_run else '🧹 CLEANUP LIVE'} завершён: "
+            f"processed={result['processed']}, kept={result['kept']}, "
+            f"duplicates={result['duplicates']}, "
+            f"cancelled={result['cancelled']}, "
+            f"would_cancel={result['would_cancel']}, "
+            f"failed={result['failed']}"
+        )
+        return result

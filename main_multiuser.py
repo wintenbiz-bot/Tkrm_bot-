@@ -5394,6 +5394,106 @@ async def process_start_orders(callback: CallbackQuery):
     finally:
         session.orders_running = False
 
+
+# ============================================================
+# ОЧИСТКА СТАРЫХ ДУБЛЕЙ ОРДЕРОВ
+# ============================================================
+@dp.message(F.text.in_(["/cleanup_orders", "🧹 Очистить дубли ордеров"]))
+async def cmd_cleanup_orders(message: Message):
+    session = get_current_session()
+
+    if orders_blocked(session):
+        await message.answer("🚫 Функция ордеров недоступна")
+        return
+
+    if not session.auth_token:
+        await message.answer("🔐 Сначала привяжи AUTH_TOKEN через /auth.")
+        return
+
+    if session.orders_running:
+        await message.answer("⚠️ Другая операция с ордерами уже выполняется!")
+        return
+
+    keyboard = InlineKeyboardMarkup(
+        inline_keyboard=[
+            [
+                InlineKeyboardButton(
+                    text="✅ ОТМЕНИТЬ ДУБЛИ",
+                    callback_data="confirm_cleanup_orders",
+                ),
+                InlineKeyboardButton(
+                    text="❌ ОТМЕНА",
+                    callback_data="cancel_cleanup_orders",
+                ),
+            ]
+        ]
+    )
+
+    await message.answer(
+        "🧹 <b>Очистка дублей ордеров</b>\n\n"
+        "Оставлю по одному самому старому живому ордеру на каждую цену "
+        "в каждой коллекции из <code>orders_to_create.json</code>.\n"
+        "Остальные живые дубли будут <b>отменены</b>.\n\n"
+        "Просроченные и уже отменённые орdera не трогаются.",
+        reply_markup=keyboard,
+        parse_mode=ParseMode.HTML,
+    )
+
+
+@dp.callback_query(F.data == "cancel_cleanup_orders")
+async def process_cancel_cleanup(callback: CallbackQuery):
+    await callback.message.edit_text("❌ Очистка дублей отменена.")
+    await callback.answer()
+
+
+@dp.callback_query(F.data == "confirm_cleanup_orders")
+async def process_cleanup_orders(callback: CallbackQuery):
+    session = get_current_session()
+
+    if orders_blocked(session):
+        await callback.answer("🚫 Функция ордеров недоступна", show_alert=True)
+        return
+
+    if session.orders_running:
+        await callback.answer("Уже выполняется!", show_alert=True)
+        return
+
+    session.orders_running = True
+    await callback.answer()
+
+    msg = await callback.message.edit_text(
+        "🧹 <b>Удаляю дубли ордеров...</b>\n\n"
+        "Это может занять несколько минут.",
+        parse_mode=ParseMode.HTML,
+    )
+
+    try:
+        async with httpx.AsyncClient(timeout=15.0) as client:
+            result = await orders_mgr.cleanup_duplicate_orders(
+                client=client,
+                file_path="orders_to_create.json",
+                dry_run=False,
+            )
+
+        await msg.edit_text(
+            "🧹 <b>Очистка завершена</b>\n\n"
+            f"📋 Проверено коллекций: <b>{result['processed']}</b>\n"
+            f"✅ Оставлено ордеров: <b>{result['kept']}</b>\n"
+            f"🧹 Найдено дублей: <b>{result['duplicates']}</b>\n"
+            f"🗑 Отменено: <b>{result['cancelled']}</b>\n"
+            f"⏭ Пропущено: <b>{result['skipped']}</b>\n"
+            f"❌ Ошибок: <b>{result['failed']}</b>",
+            parse_mode=ParseMode.HTML,
+        )
+    except Exception as e:
+        logger.exception(f"Ошибка очистки дублей ордеров: {e}")
+        await msg.edit_text(
+            f"❌ <b>Ошибка очистки:</b>\n\n<code>{str(e)[:1000]}</code>",
+            parse_mode=ParseMode.HTML,
+        )
+    finally:
+        session.orders_running = False
+
 # --- БЛОК РАСЧЁТА И ОТОБРАЖЕНИЯ ПРИБЫЛИ ---
 
 def make_profit_keyboard(months: list, current_index: int) -> InlineKeyboardMarkup:
