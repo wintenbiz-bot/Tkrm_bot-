@@ -14,6 +14,7 @@ import hmac
 import json
 import logging
 import os
+import re
 import time
 import urllib.parse
 from contextlib import asynccontextmanager
@@ -119,13 +120,37 @@ def session_state(telegram_id: int) -> dict:
     }
 
 
-async def verify_mrkt_token(token: str) -> bool:
+def normalize_auth_token(raw: str) -> str:
+    """
+    Пользователи часто копируют не только сам token, а кусок JSON,
+    кавычки или 'Bearer '. Достаём из этого 32+ hex-символа.
+    """
+    value = str(raw or "").strip()
+    if not value:
+        return ""
+
+    if value.lstrip().startswith("{"):
+        try:
+            value = str((json.loads(value) or {}).get("token") or "")
+        except Exception:
+            pass
+
+    if value.lower().startswith("bearer "):
+        value = value[7:].strip()
+
+    value = value.strip().strip("\"'")
+
+    match = re.search(r"[0-9a-fA-F]{32,}", value)
+    return match.group(0) if match else value
+
+
+async def verify_mrkt_token(token: str) -> tuple[bool, str]:
     """
     Не сохраняем мусор: проверяем токен через /balance.
 
     MRKT чувствителен к TLS-отпечатку, поэтому используем тот же
-    curl_cffi, что и авто-обмен initData. Иначе валидный токен
-    может быть отклонён просто из-за «не того» ClientHello.
+    curl_cffi, что и остальные запросы к API. Возвращаем и статус,
+    чтобы понять: невалидный токен (404) или сетевая ошибка.
     """
     headers = dict(core.BASE_HEADERS)
     headers["authorization"] = token
@@ -145,10 +170,10 @@ async def verify_mrkt_token(token: str) -> bool:
                     headers=headers,
                 )
         logger.info("🔎 Проверка MRKT-токена: /balance -> %s", response.status_code)
-        return response.status_code == 200
+        return response.status_code == 200, str(response.status_code)
     except Exception as e:
         logger.warning(f"⚠️ Не удалось проверить MRKT-токен: {e}")
-        return False
+        return False, ""
 
 
 # ============================================================
@@ -277,12 +302,10 @@ async def api_session_auth(payload: dict = Body(...)):
     init_data = payload.get("init_data")
     telegram_id = validate_init_data(init_data)
 
-    token = str(payload.get("token") or "").strip()
+    token = normalize_auth_token(payload.get("token"))
 
     if not token:
         # Повторяем payload MRKT Web App:
-
-
         # {"data": initData, "photo": "...", "appId": null}
         try:
             parsed = dict(
@@ -353,12 +376,19 @@ async def api_session_auth(payload: dict = Body(...)):
                 status_code=502,
             )
     else:
-        if not await verify_mrkt_token(token):
+        ok, status = await verify_mrkt_token(token)
+        if not ok:
+            detail = (
+                "MRKT не признал токен. Скопируй именно значение token "
+                "из Response запроса /api/v1/auth."
+            )
+            if status:
+                detail += f" (/balance -> {status})"
             return JSONResponse(
                 {
                     "ok": False,
                     "error": "invalid_token",
-                    "detail": "MRKT отклонил этот токен (/balance)",
+                    "detail": detail,
                 },
                 status_code=400,
             )
