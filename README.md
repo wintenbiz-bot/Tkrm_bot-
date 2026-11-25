@@ -44,6 +44,7 @@ Mini App покажет поле для ручной вставки токена
 - `requirements.txt` — зависимости;
 - `render.yaml` — Web Service с постоянным диском и health-check;
 - `.gitignore` — исключает `users.json`, кэши и `.env`;
+- `orders_to_create.json` — список коллекций для ордеров, это конфиг, его нужно коммитить;
 - FastAPI и aiogram запускаются **в одном процессе** (`server.py`), поэтому
   API и бот используют одну и ту же память сессий.
 

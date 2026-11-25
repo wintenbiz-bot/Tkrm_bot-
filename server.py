@@ -279,20 +279,38 @@ async def api_session_auth(payload: dict = Body(...)):
     token = str(payload.get("token") or "").strip()
 
     if not token:
+        # Повторяем payload MRKT Web App:
+
+
+        # {"data": initData, "photo": "...", "appId": null}
+        try:
+            parsed = dict(
+                urllib.parse.parse_qsl(init_data, keep_blank_values=True)
+            )
+            user = json.loads(parsed.get("user") or "{}")
+        except Exception:
+            user = {}
+
+        auth_payload = {"data": init_data, "appId": None}
+        photo = user.get("photo_url")
+        if photo:
+            auth_payload["photo"] = photo
+
         try:
             if CurlAsyncSession is not None:
                 async with CurlAsyncSession(impersonate="chrome") as client:
                     response = await client.post(
                         core.AUTH_URL,
-                        json={"data": init_data},
+                        json=auth_payload,
                     )
             else:
                 async with httpx.AsyncClient(timeout=15.0) as client:
                     response = await client.post(
                         core.AUTH_URL,
-                        json={"data": init_data},
+                        json=auth_payload,
                     )
         except Exception as e:
+            logger.warning("⚠️ MRKT auth network error: %s", e)
             return JSONResponse(
                 {
                     "ok": False,
@@ -303,6 +321,11 @@ async def api_session_auth(payload: dict = Body(...)):
             )
 
         if response.status_code != 200:
+            logger.warning(
+                "⚠️ MRKT auth rejected: status=%s body=%s",
+                response.status_code,
+                response.text[:300],
+            )
             return JSONResponse(
                 {
                     "ok": False,
