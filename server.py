@@ -113,6 +113,7 @@ def session_state(telegram_id: int) -> dict:
         "telegram_id": telegram_id,
         "auth_configured": bool(session.auth_token),
         "auth_ok": bool(session.auth_ok),
+        "sheet_configured": bool(session.apps_script_url),
         "feed_enabled": session.feed_active(),
         "feed_seconds_left": session.feed_seconds_left(),
         "feed_window_seconds": core.FEED_WINDOW_SECONDS,

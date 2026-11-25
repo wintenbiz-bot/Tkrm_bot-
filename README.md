@@ -57,7 +57,18 @@ MRKT в `orders/get-my-orders` не возвращает поле `status`. Бо
 `/cleanup_orders` — она оставляет по одному самому старому живому ордеру
 на каждую цену и отменяет остальные только после подтверждения.
 
-### 5. GitHub + Render
+### 5. Google Таблица (P&L)
+URL Apps Script привязывается отдельно каждому пользователю командой:
+
+```text
+/sheet https://script.google.com/macros/s/.../exec
+```
+
+Проверить привязку можно через `/sheet_status`. Если URL не задан, кнопка
+«📈 Прибыль (P&L)» теперь явно покажет предупреждение вместо тихого пропуска.
+Отправка идёт только при нажатии P&L; дубликаты Apps Script отсекает сам.
+
+### 6. GitHub + Render
 - `requirements.txt` — зависимости;
 - `render.yaml` — Web Service с постоянным диском и health-check;
 - `.gitignore` — исключает `users.json`, `floor_state_*.json`, кэши и `.env`;

@@ -1927,7 +1927,10 @@ async def cmd_set_sheet(message: Message):
 
     url = message.text.split(" ", 1)[1].strip()
 
-    if not url.startswith("https://script.google.com/macros/s/"):
+    if (
+        not url.startswith("https://script.google.com/macros/s/")
+        or "/exec" not in url
+    ):
         await message.answer(
             "❌ Неверный URL.\n"
             "Он должен начинаться с "
@@ -1945,6 +1948,28 @@ async def cmd_set_sheet(message: Message):
         "Теперь при нажатии «📈 Прибыль (P&L)» "
         "сделки будут дописываться автоматически."
     )
+
+
+@dp.message(F.text.in_(["/sheet_status", "📊 Статус таблицы"]))
+async def cmd_sheet_status(message: Message):
+    session = get_current_session()
+
+    if not session.apps_script_url:
+        await message.answer(
+            "⚠️ Google Таблица не привязана.\n"
+            "Отправь: <code>/sheet https://script.google.com/macros/s/.../exec</code>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    suffix = session.apps_script_url[-16:]
+    await message.answer(
+        f"✅ Google Таблица привязана.\n"
+        f"URL: <code>...{suffix}</code>\n\n"
+        "Нажми «📈 Прибыль (P&L)», чтобы отправить сделки.",
+        parse_mode=ParseMode.HTML,
+    )
+
 
 @dp.message(
     F.text.in_([
@@ -5603,29 +5628,42 @@ async def cmd_profit(message: Message):
     save_pnl_cache(session.telegram_id, monthly_stats)
 
     # ---- Отправка в Google Sheet (если URL привязан) ----
-    sheet_status = ""
+    trades_for_sheet = build_trades_for_sheet(raw_history)
 
-    if session.apps_script_url:
-        trades_for_sheet = build_trades_for_sheet(raw_history)
-
-        if trades_for_sheet:
-            sync_result = await sync_trades_to_sheet(
-                script_url=session.apps_script_url,
-                trades=trades_for_sheet,
+    if not session.apps_script_url:
+        sheet_status = (
+            "\n\n⚠️ Google Таблица не привязана. "
+            "Отправь боту <code>/sheet URL_ПРИЛОЖЕНИЯ</code>."
+        )
+        logger.info(
+            f"📊 [user {session.telegram_id}] Sheet: URL не задан, "
+            f"сделок для отправки: {len(trades_for_sheet)}"
+        )
+    elif not trades_for_sheet:
+        sheet_status = "\n\nℹ️ Сделок для таблицы не найдено."
+        logger.info(
+            f"📊 [user {session.telegram_id}] Sheet: сделок для отправки нет"
+        )
+    else:
+        sync_result = await sync_trades_to_sheet(
+            script_url=session.apps_script_url,
+            trades=trades_for_sheet,
+        )
+        logger.info(
+            f"📊 [user {session.telegram_id}] Sheet sync: "
+            f"trades={len(trades_for_sheet)} result={sync_result}"
+        )
+        if sync_result["ok"]:
+            sheet_status = (
+                f"\n\n✅ В Google Таблицу добавлено "
+                f"{sync_result['added']} новых сделок "
+                f"(пропущено дубликатов: {sync_result['skipped']})."
             )
-            if sync_result["ok"]:
-                sheet_status = (
-                    f"\n\n✅ В Google Таблицу добавлено "
-                    f"{sync_result['added']} новых сделок "
-                    f"(пропущено дубликатов: {sync_result['skipped']})."
-                )
-            else:
-                sheet_status = (
-                    f"\n\n⚠️ Google Sheet не принял данные: "
-                    f"<code>{sync_result.get('error')}</code>"
-                )
         else:
-            sheet_status = "\n\nℹ️ Сделок для таблицы не найдено."
+            sheet_status = (
+                f"\n\n⚠️ Google Sheet не принял данные: "
+                f"<code>{sync_result.get('error')}</code>"
+            )
 
     if not monthly_stats:
         await msg.edit_text(
