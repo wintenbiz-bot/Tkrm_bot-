@@ -777,8 +777,17 @@
       if (e.status) {
         // Сервер ответил, но отклонил токен / initData.
         // НЕ вызываем fallback — иначе покажем «токен сохранён», хотя он не сохранён.
-        toast("Не сохранил: " + e.message);
-        if (token) $("tokenOverlay").classList.add("show");
+        const mrktRejectedBotInitData =
+          e.status === 502 || /Forbid|auth/i.test(e.message || "");
+        if (mrktRejectedBotInitData) {
+          toast(
+            "MRKT не принимает initData нашего бота. " +
+            "Вставь токен из MRKT один раз — сохраним его на сервере."
+          );
+        } else {
+          toast("Не сохранил: " + e.message);
+        }
+        $("tokenOverlay").classList.add("show");
       } else if (token) {
         // Реально нет связи с API (например, Mini App с GitHub Pages).
         fallback({ auth_token: token }, "API недоступен — отправляю токен боту…");

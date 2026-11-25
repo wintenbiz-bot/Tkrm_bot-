@@ -269,9 +269,10 @@ async def api_session_auth(payload: dict = Body(...)):
     """
     Два режима:
 
-    1) без `token` — обмениваем initData Telegram на MRKT-токен
-       через https://api.tgmrkt.io/api/v1/auth. Это убирает F12.
-    2) с `token` — пользователь вставил токен вручную (fallback).
+    1) без `token` — пытаемся обменять initData нашего бота на MRKT-токен.
+       MRKT обычно проверяет подпись своим bot token и возвращает 403 —
+       тогда пользователь один раз вставляет токен вручную.
+    2) с `token` — пользователь вставил токен вручную (рабочий путь).
     """
     init_data = payload.get("init_data")
     telegram_id = validate_init_data(init_data)
