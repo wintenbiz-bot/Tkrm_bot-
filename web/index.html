@@ -517,7 +517,7 @@
 <div class="overlay" id="tokenOverlay">
   <div class="modal">
     <h3>Вставить MRKT-токен</h3>
-    <p>Открой MRKT → F12 → Network → <code>/api/v1/auth</code> → Response → <code>token</code>. Скопируй его сюда один раз — бот сохранит токен на сервере, повторять не придётся.</p>
+    <p>Открой MRKT → F12 → Network → <code>/api/v1/auth</code> → Response → <code>token</code>. Скопируй его сюда один раз — сохраним так же, как команда <code>/auth</code>, и больше не спросим.</p>
     <input id="tokenInput" type="text" placeholder="AUTH_TOKEN" autocomplete="off" spellcheck="false">
     <div class="modal-actions">
       <button class="btn ghost" id="cancelTokenBtn" type="button">Отмена</button>
@@ -765,7 +765,7 @@
   async function doAuth(token) {
     const btn = $("authBtn");
     btn.disabled = true;
-    btn.textContent = "⏳ Обмениваем...";
+    btn.textContent = token ? "⏳ Сохраняем..." : "⏳ Обмениваем...";
     try {
       const payload = token ? { token } : {};
       const result = await api("/api/session/auth", payload);
@@ -775,10 +775,11 @@
       $("tokenOverlay").classList.remove("show");
     } catch (e) {
       if (e.status) {
-        // Сервер ответил, но отклонил токен / initData.
-        // НЕ вызываем fallback — иначе покажем «токен сохранён», хотя он не сохранён.
+        // Сервер ответил, но отклонил initData. При ручном токене дополнительной
+        // проверки нет, поэтому НЕ вызываем fallback — иначе покажем «сохранено»,
+        // хотя сервер его не принял.
         const mrktRejectedBotInitData =
-          e.status === 502 || /Forbid|auth/i.test(e.message || "");
+          !token && (e.status === 502 || /Forbid|auth/i.test(e.message || ""));
         if (mrktRejectedBotInitData) {
           toast(
             "MRKT не принимает initData нашего бота. " +

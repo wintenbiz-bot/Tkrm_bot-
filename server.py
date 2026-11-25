@@ -144,38 +144,6 @@ def normalize_auth_token(raw: str) -> str:
     return match.group(0) if match else value
 
 
-async def verify_mrkt_token(token: str) -> tuple[bool, str]:
-    """
-    Не сохраняем мусор: проверяем токен через /balance.
-
-    MRKT чувствителен к TLS-отпечатку, поэтому используем тот же
-    curl_cffi, что и остальные запросы к API. Возвращаем и статус,
-    чтобы понять: невалидный токен (404) или сетевая ошибка.
-    """
-    headers = dict(core.BASE_HEADERS)
-    headers["authorization"] = token
-    headers["cookie"] = f"access_token={token}"
-
-    try:
-        if CurlAsyncSession is not None:
-            async with CurlAsyncSession(impersonate="chrome") as client:
-                response = await client.get(
-                    core.BALANCE_URL,
-                    headers=headers,
-                )
-        else:
-            async with httpx.AsyncClient(timeout=12.0) as client:
-                response = await client.get(
-                    core.BALANCE_URL,
-                    headers=headers,
-                )
-        logger.info("🔎 Проверка MRKT-токена: /balance -> %s", response.status_code)
-        return response.status_code == 200, str(response.status_code)
-    except Exception as e:
-        logger.warning(f"⚠️ Не удалось проверить MRKT-токен: {e}")
-        return False, ""
-
-
 # ============================================================
 # LIFESPAN: бот живёт внутри FastAPI
 # ============================================================
@@ -297,7 +265,8 @@ async def api_session_auth(payload: dict = Body(...)):
     1) без `token` — пытаемся обменять initData нашего бота на MRKT-токен.
        MRKT обычно проверяет подпись своим bot token и возвращает 403 —
        тогда пользователь один раз вставляет токен вручную.
-    2) с `token` — пользователь вставил токен вручную (рабочий путь).
+    2) с `token` — сохраняем сразу, как команда `/auth`, без проверки
+       через `/balance` (Mini App не должна блокировать сохранение).
     """
     init_data = payload.get("init_data")
     telegram_id = validate_init_data(init_data)
@@ -375,24 +344,9 @@ async def api_session_auth(payload: dict = Body(...)):
                 },
                 status_code=502,
             )
-    else:
-        ok, status = await verify_mrkt_token(token)
-        if not ok:
-            detail = (
-                "MRKT не признал токен. Скопируй именно значение token "
-                "из Response запроса /api/v1/auth."
-            )
-            if status:
-                detail += f" (/balance -> {status})"
-            return JSONResponse(
-                {
-                    "ok": False,
-                    "error": "invalid_token",
-                    "detail": detail,
-                },
-                status_code=400,
-            )
-
+    # Ручной токен сохраняется точно так же, как команда /auth:
+    # никакой дополнительной проверки через /balance. Если токен
+    # не подойдёт, фоновые циклы сами пометят сессию невалидной.
     await core.apply_auth_token(
         telegram_id,
         token,
