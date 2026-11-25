@@ -327,7 +327,7 @@
       <div>
         <div class="eyebrow">Статус аккаунта</div>
         <div class="hero-title" id="heroTitle">Подключи MRKT-аккаунт</div>
-        <div class="hero-sub" id="heroSub">Токен обновится автоматически — F12 больше не нужен.</div>
+        <div class="hero-sub" id="heroSub">Вставь токен из MRKT один раз — дальше F12 не понадобится.</div>
       </div>
     </div>
 
@@ -341,7 +341,7 @@
     </div>
 
     <div class="hero-actions">
-      <button class="btn primary" id="authBtn" type="button">🔑 Обновить токен</button>
+      <button class="btn primary" id="authBtn" type="button">🔑 Вставить токен</button>
       <button class="btn" id="feedBtn" type="button">▶️ Feed на 30 мин</button>
     </div>
   </section>
@@ -363,12 +363,12 @@
   <!-- ГЛАВНАЯ -->
   <section class="panel active" data-panel="main">
     <div class="group">
-      <div class="group-head"><span class="group-title">Быстрые действия</span><span class="group-hint">без F12</span></div>
+      <div class="group-head"><span class="group-title">Быстрые действия</span><span class="group-hint">токен один раз</span></div>
       <div class="card">
         <div class="row">
           <div class="row-icon">🔑</div>
-          <div class="row-main"><div class="row-title">MRKT AUTH_TOKEN</div><div class="row-desc">Обменяем initData Telegram на токен маркета. Если MRKT отклонит обмен — вставим токен вручную.</div></div>
-          <button class="btn ghost" id="authRowBtn" type="button">Обновить</button>
+          <div class="row-main"><div class="row-title">MRKT AUTH_TOKEN</div><div class="row-desc">Вставь токен из MRKT один раз — бот сохранит его на сервере и больше не спросит.</div></div>
+          <button class="btn ghost" id="authRowBtn" type="button">Вставить</button>
         </div>
         <div class="row">
           <div class="row-icon">⏱</div>
@@ -517,7 +517,7 @@
 <div class="overlay" id="tokenOverlay">
   <div class="modal">
     <h3>Вставить MRKT-токен</h3>
-    <p>Автоматический обмен не сработал. Открой MRKT → network → <code>/api/v1/auth</code> → Response → token, вставь его сюда. Больше повторять не придётся — бот сохранит токен на сервере.</p>
+    <p>Открой MRKT → F12 → Network → <code>/api/v1/auth</code> → Response → <code>token</code>. Скопируй его сюда один раз — бот сохранит токен на сервере, повторять не придётся.</p>
     <input id="tokenInput" type="text" placeholder="AUTH_TOKEN" autocomplete="off" spellcheck="false">
     <div class="modal-actions">
       <button class="btn ghost" id="cancelTokenBtn" type="button">Отмена</button>
@@ -723,8 +723,8 @@
     $("heroTitle").textContent = ok ? "Аккаунт подключён" : "Подключи MRKT-аккаунт";
     $("heroSub").textContent = ok
       ? "Токен хранится на сервере. Feed не опрашивается, пока ты его не включишь."
-      : "Токен обновится автоматически — F12 больше не нужен.";
-    $("authBtn").textContent = ok ? "🔄 Обновить токен" : "🔑 Подключить токен";
+      : "Вставь токен из MRKT один раз — дальше F12 не понадобится.";
+    $("authBtn").textContent = ok ? "🔄 Заменить токен" : "🔑 Вставить токен";
     setFeedState(!!currentState.feed_enabled, currentState.feed_seconds_left || 0);
     feedDeadline = currentState.feed_enabled
       ? Date.now() + (currentState.feed_seconds_left || 0) * 1000
@@ -797,7 +797,7 @@
       }
     } finally {
       btn.disabled = false;
-      btn.textContent = currentState.auth_configured ? "🔄 Обновить токен" : "🔑 Подключить токен";
+      btn.textContent = currentState.auth_configured ? "🔄 Заменить токен" : "🔑 Вставить токен";
     }
   }
 
@@ -818,8 +818,15 @@
     }
   }
 
-  $("authBtn").addEventListener("click", () => doAuth(""));
-  $("authRowBtn").addEventListener("click", () => doAuth(""));
+  function openTokenModal() {
+    $("tokenOverlay").classList.add("show");
+    setTimeout(() => {
+      try { $("tokenInput").focus(); } catch (e) {}
+    }, 80);
+  }
+
+  $("authBtn").addEventListener("click", openTokenModal);
+  $("authRowBtn").addEventListener("click", openTokenModal);
   $("feedBtn").addEventListener("click", toggleFeed);
   $("feedRowBtn").addEventListener("click", toggleFeed);
   $("mrktBtn").addEventListener("click", () => {
